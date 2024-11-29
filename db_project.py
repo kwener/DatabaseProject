@@ -1,6 +1,8 @@
 import mysql.connector
 from mysql.connector import Error
 import json
+import tkinter as tk
+from tkinter import ttk
 
 # Establish connection to MySQL database
 
@@ -157,5 +159,25 @@ def create_tables(conn):
     #maybe make a table for course degree relationship?
 
 
+load_config()
+connect_to_database()
+
+def main_menu():
+    def open_data_entry():
+        data_entry_window()
+
+    def open_query_menu():
+        query_window()
+
+    root = tk.Tk()
+    root.title("Academic Database Manager")
+    root.geometry("400x300")
+
+    tk.Label(root, text="Main Menu", font=("Arial", 16)).pack(pady=20)
+
+    tk.Button(root, text="Data Entry", width=20, command=open_data_entry).pack(pady=10)
+    tk.Button(root, text="Query Menu", width=20, command=open_query_menu).pack(pady=10)
+
+    root.mainloop()
 load_config()
 connect_to_database()
