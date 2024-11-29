@@ -59,7 +59,7 @@ def create_tables(conn):
     create_course= """
             CREATE TABLE IF NOT EXISTS course (
                 course_num VARCHAR(10) PRIMARY KEY,
-                name VARCHAR(100) NOT NULL,
+                name VARCHAR(100) NOT NULL
             );
             """
     cursor.execute(create_course)
@@ -84,12 +84,12 @@ def create_tables(conn):
             year int,
             semester VARCHAR(8),
             num_students int,
-            instructor_id int,
-            PRIMARY KEY(course_num, section_num, year, semester)
+            instructor_id VARCHAR(10),
+            PRIMARY KEY(course_num, section_num, year, semester),
             FOREIGN KEY (course_num) REFERENCES course(course_num) ON DELETE CASCADE,
-            FOREIGN KEY (instructor_id) REFERENCES instructor(instructor_id) ON DELETE CASCADE,
+            FOREIGN KEY (instructor_id) REFERENCES instructor(instructor_id) ON DELETE CASCADE
         );
-            """
+        """
     
     cursor.execute(create_section)
 
@@ -107,10 +107,9 @@ def create_tables(conn):
                 degree_name VARCHAR(200),
                 degree_level VARCHAR(200),
                 course_num VARCHAR(10),
-                PRIMARY KEY(course_num, degree_name, degree_level)
+                PRIMARY KEY(course_num, degree_name, degree_level),
                 FOREIGN KEY (course_num) REFERENCES course(course_num) ON DELETE CASCADE,
-                FOREIGN KEY (degree_name) REFERENCES degree(degree_name) ON DELETE CASCADE,
-                FOREIGN KEY (degree_level) REFERENCES degree(degree_level) ON DELETE CASCADE,
+                FOREIGN KEY (degree_name, degree_level) REFERENCES degree(degree_name, degree_level) ON DELETE CASCADE
             );
             """
     cursor.execute(create_degree_courses)
@@ -124,10 +123,10 @@ def create_tables(conn):
                 goal_num CHAR(4),
                 degree_name VARCHAR(200),
                 degree_level VARCHAR(200),
-                description VARCHAR, 
-                PRIMARY KEY(goal_num, degree_name, degree_level)
+                description VARCHAR(500), 
+                PRIMARY KEY(goal_num, degree_name, degree_level),
                 FOREIGN KEY (degree_name) REFERENCES degree(degree_name) ON DELETE CASCADE,
-                FOREIGN KEY (degree_level) REFERENCES degree(degree_level) ON DELETE CASCADE,
+                FOREIGN KEY (degree_level) REFERENCES degree(degree_level) ON DELETE CASCADE
             );
             """
     cursor.execute(create_goal)
@@ -141,13 +140,13 @@ def create_tables(conn):
                 degree_name VARCHAR(200),
                 degree_level VARCHAR(200),
                 goal_type VARCHAR(200),
-                suggestions VARCHAR,
+                suggestions VARCHAR(500),
                 numA int,
                 numB int,
                 numC int,
                 numF int,
-                PRIMARY KEY(goal_num, degree_name, degree_level, section_num, course_num)
-                FOREIGN KEY (degree_name, degree level) 
+                PRIMARY KEY(goal_num, degree_name, degree_level, section_num, course_num),
+                FOREIGN KEY (degree_name, degree_level) 
                     REFERENCES degree(degree_name, degree_level) ON DELETE CASCADE,
                 FOREIGN KEY (goal_num) REFERENCES goal(goal_num) ON DELETE CASCADE,
                 FOREIGN KEY (section_num, course_num) 
@@ -156,7 +155,9 @@ def create_tables(conn):
             """
     cursor.execute(create_evaluation)
 
-    #maybe make a table for course degree relationship?
+    print("Tables created successfully!")
+
+    # maybe make a table for course degree relationship?
 
 def data_entry_window(cursor):
     data_entry_window = tk.Toplevel()  # Create a new top-level window
@@ -204,8 +205,8 @@ def enter_degree(data_entry_window, cursor):
         else:
             print("Please fill in both degree name and degree level.")
 
-        submit_button = tk.Button(degree_window, text="Submit", command=lambda: submit_degree(cursor))
-        submit_button.grid(row=2, column=1, pady=10)
+        # submit_button = tk.Button(degree_window, text="Submit", command=lambda: submit_degree(cursor))
+        # submit_button.grid(row=2, column=1, pady=10)
 
 
 
@@ -243,15 +244,10 @@ def main_menu(conn):
 
     root.mainloop()
 
-
-conn = connect_to_database()
-load_config()
-
-main_menu(conn)
-
 def main():
     conn = connect_to_database()
     create_tables(conn)
     main_menu(conn)
 
-
+if __name__ == "__main__":
+    main()
