@@ -158,13 +158,76 @@ def create_tables(conn):
 
     #maybe make a table for course degree relationship?
 
+def data_entry_window(cursor):
+    data_entry_window = tk.Toplevel()  # Create a new top-level window
+    data_entry_window.title("Data Entry Choices")
+    
+    # Add buttons for each data type
+    tk.Button(data_entry_window, text="Enter Degree", command=lambda: enter_degree(data_entry_window, cursor)).pack(pady=10)
+    tk.Button(data_entry_window, text="Enter Course", command=lambda: enter_course(data_entry_window)).pack(pady=10)
+    tk.Button(data_entry_window, text="Enter Instructor", command=lambda: enter_instructor(data_entry_window)).pack(pady=10)
+    tk.Button(data_entry_window, text="Enter Section", command=lambda: enter_section(data_entry_window)).pack(pady=10)
+    tk.Button(data_entry_window, text="Enter Evaluation", command=lambda: enter_evaluation(data_entry_window)).pack(pady=10)
 
-load_config()
-connect_to_database()
 
-def main_menu():
+def enter_degree(data_entry_window, cursor):
+    degree_window = tk.Toplevel()
+    degree_window.title("Enter Degree")
+
+    label_deg_name = tk.Label(degree_window, text='Degree Name')
+    label_deg_name.grid(row=0, column=0)
+
+    label_deg_level = tk.Label(degree_window, text='Degree Level')
+    label_deg_level.grid(row=1, column=0)
+
+    deg_name = tk.Entry(degree_window)  # Entry field for degree name
+    deg_name.grid(row=0, column=1)
+    
+    deg_level = tk.Entry(degree_window)  # Entry field for degree level
+    deg_level.grid(row=1, column=1)
+
+    submit_button = tk.Button(degree_window, text="Submit", command=lambda: submit_degree(cursor))
+    submit_button.grid(row=2, column=1, pady=10)
+     
+    def submit_degree(cursor):
+        degree_name = deg_name.get()
+        degree_level = deg_level.get()
+
+        if degree_name and degree_level:
+            try: 
+                deg_insert_query = "INSERT INTO degree (degree_name, degree_level) VALUES (%s, %s)"
+                cursor.execute(deg_insert_query, (degree_name, degree_level))
+                print("Degree added successfully!")
+                degree_window.destroy()
+            except mysql.connector.Error as e:
+                print(f"Error: {e}")
+        else:
+            print("Please fill in both degree name and degree level.")
+
+        submit_button = tk.Button(degree_window, text="Submit", command=lambda: submit_degree(cursor))
+        submit_button.grid(row=2, column=1, pady=10)
+
+
+
+def enter_course(data_entry_window):
+    return
+
+def enter_instructor(data_entry_window):
+    return
+
+def enter_section(data_entry_window):
+    return
+
+def enter_evaluation(data_entry_window):
+    return
+
+
+
+#https://www.geeksforgeeks.org/python-gui-tkinter/
+def main_menu(conn):
+    mycursor = conn.cursor()
     def open_data_entry():
-        data_entry_window()
+        data_entry_window(mycursor)
 
     def open_query_menu():
         query_window()
@@ -179,5 +242,16 @@ def main_menu():
     tk.Button(root, text="Query Menu", width=20, command=open_query_menu).pack(pady=10)
 
     root.mainloop()
+
+
+conn = connect_to_database()
 load_config()
-connect_to_database()
+
+main_menu(conn)
+
+def main():
+    conn = connect_to_database()
+    create_tables(conn)
+    main_menu(conn)
+
+
