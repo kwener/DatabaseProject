@@ -168,7 +168,7 @@ def data_entry_window(conn):
     tk.Button(data_entry_window, text="Enter Course", command=lambda: enter_course(data_entry_window, conn)).pack(pady=10)
     tk.Button(data_entry_window, text="Enter Instructor", command=lambda: enter_instructor(data_entry_window, conn)).pack(pady=10)
     tk.Button(data_entry_window, text="Enter Section", command=lambda: enter_section(data_entry_window, conn)).pack(pady=10)
-    tk.Button(data_entry_window, text="Enter Evaluation", command=lambda: enter_evaluation(data_entry_window)).pack(pady=10)
+    tk.Button(data_entry_window, text="Enter Evaluation", command=lambda: enter_evaluation(data_entry_window, conn)).pack(pady=10)
 
 
 def enter_degree(data_entry_window, conn):
@@ -351,7 +351,57 @@ def enter_section(data_entry_window, conn):
             print("Please fill in all fields.")
 
 
-def enter_evaluation(data_entry_window):
+def enter_evaluation(data_entry_window, conn):
+    evaluation_window = tk.Toplevel()
+    evaluation_window.title("Evaluation Hub")
+
+    tk.Button(evaluation_window, text="View Sections", command=lambda: view_sections(evaluation_window, conn)).pack(pady=10)
+    
+
+
+    def view_sections(evaluation_window, conn):
+        semester_and_instructor_window = tk.Toplevel()
+        semester_and_instructor_window.title("Enter Semester and Instructor ID")
+
+        label_semester = tk.Label(semester_and_instructor_window, text='Semester')
+        label_semester.grid(row=0, column=0)
+
+        label_instructor_id = tk.Label(semester_and_instructor_window, text='Instructor ID')
+        label_instructor_id.grid(row=1, column=0)
+
+        semester_entry = tk.Entry(semester_and_instructor_window)  # Entry field for semester
+        semester_entry.grid(row=0, column=1)
+
+        instructor_id_entry = tk.Entry(semester_and_instructor_window)  # Entry field for instructor ID
+        instructor_id_entry.grid(row=1, column=1)
+
+        def get_sections():
+            semester = semester_entry.get()
+            instructor_id = instructor_id_entry.get()
+            cursor = conn.cursor()
+
+            if instructor_id and semester:
+                cursor.execute("SELECT course_num, section_num FROM section WHERE semester = %s AND instructor_id = %s", (semester, instructor_id))
+                sections = cursor.fetchall()
+                if sections:
+                    print(sections)
+                    return sections
+                else:
+                    print("No sections found for this semester and instructor.")
+                    return None
+            else:
+                print("Please fill in both semester and instructor ID.")
+                return None
+        tk.Button(semester_and_instructor_window, text="Submit", command=get_sections).grid(row=2, column=1, pady=10)
+
+    
+
+            
+
+
+        
+
+
     return
 
 
