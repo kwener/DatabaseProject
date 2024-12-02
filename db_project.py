@@ -165,9 +165,9 @@ def data_entry_window(conn):
     
     # Add buttons for each data type
     tk.Button(data_entry_window, text="Enter Degree", command=lambda: enter_degree(data_entry_window, conn)).pack(pady=10)
-    tk.Button(data_entry_window, text="Enter Course", command=lambda: enter_course(data_entry_window)).pack(pady=10)
-    tk.Button(data_entry_window, text="Enter Instructor", command=lambda: enter_instructor(data_entry_window)).pack(pady=10)
-    tk.Button(data_entry_window, text="Enter Section", command=lambda: enter_section(data_entry_window)).pack(pady=10)
+    tk.Button(data_entry_window, text="Enter Course", command=lambda: enter_course(data_entry_window, conn)).pack(pady=10)
+    tk.Button(data_entry_window, text="Enter Instructor", command=lambda: enter_instructor(data_entry_window, conn)).pack(pady=10)
+    tk.Button(data_entry_window, text="Enter Section", command=lambda: enter_section(data_entry_window, conn)).pack(pady=10)
     tk.Button(data_entry_window, text="Enter Evaluation", command=lambda: enter_evaluation(data_entry_window)).pack(pady=10)
 
 
@@ -212,14 +212,144 @@ def enter_degree(data_entry_window, conn):
 
 
 
-def enter_course(data_entry_window):
-    return
+def enter_course(data_entry_window, conn):
+    course_window = tk.Toplevel()
+    course_window.title("Enter Course")
 
-def enter_instructor(data_entry_window):
-    return
+    label_course_num = tk.Label(course_window, text='Course Number')
+    label_course_num.grid(row=0, column=0)
 
-def enter_section(data_entry_window):
-    return
+    label_course_name = tk.Label(course_window, text='Course Name')
+    label_course_name.grid(row=1, column=0)
+
+    course_num_entry = tk.Entry(course_window)  # Entry field for course number
+    course_num_entry.grid(row=0, column=1)
+
+    course_name_entry = tk.Entry(course_window)  # Entry field for course name
+    course_name_entry.grid(row=1, column=1)
+
+    submit_button = tk.Button(course_window, text="Submit", command=lambda: submit_course(conn))
+    submit_button.grid(row=2, column=1, pady=10)
+
+    def submit_course(conn):
+        course_num = course_num_entry.get()
+        course_name = course_name_entry.get()
+        cursor = conn.cursor()
+
+        if course_num and course_name:
+            try: 
+                course_insert_query = "INSERT INTO course (course_num, name) VALUES (%s, %s)"
+                cursor.execute(course_insert_query, (course_num, course_name))
+                conn.commit()
+                print("Course added successfully!")
+                course_window.destroy()
+            except mysql.connector.Error as e:
+                print(f"Error: {e}")
+        else:
+            print("Please fill in both course number and course name.")
+    
+
+def enter_instructor(data_entry_window, conn):
+    instructor_window = tk.Toplevel()
+    instructor_window.title("Enter Instructor")
+
+    label_instructor_id = tk.Label(instructor_window, text='Instructor ID')
+    label_instructor_id.grid(row=0, column=0)
+
+    label_instructor_name = tk.Label(instructor_window, text='Instructor Name')
+    label_instructor_name.grid(row=1, column=0)
+
+    instructor_id_entry = tk.Entry(instructor_window)  # Entry field for instructor ID
+    instructor_id_entry.grid(row=0, column=1)
+
+    instructor_name_entry = tk.Entry(instructor_window)  # Entry field for instructor name
+    instructor_name_entry.grid(row=1, column=1)
+
+    submit_button = tk.Button(instructor_window, text="Submit", command=lambda: submit_instructor(conn))
+    submit_button.grid(row=2, column=1, pady=10)
+
+    def submit_instructor(conn):
+        instructor_id = instructor_id_entry.get()
+        instructor_name = instructor_name_entry.get()
+        cursor = conn.cursor()
+
+        if instructor_id and instructor_name:
+            try: 
+                instructor_insert_query = "INSERT INTO instructor (instructor_id, name) VALUES (%s, %s)"
+                cursor.execute(instructor_insert_query, (instructor_id, instructor_name))
+                conn.commit()
+                print("Instructor added successfully!")
+                instructor_window.destroy()
+            except mysql.connector.Error as e:
+                print(f"Error: {e}")
+        else:
+            print("Please fill in both instructor ID and instructor name.")
+
+
+def enter_section(data_entry_window, conn):
+    section_window = tk.Toplevel()
+    section_window.title("Enter Section")
+
+    label_course_num = tk.Label(section_window, text='Course Number')
+    label_course_num.grid(row=0, column=0)
+
+    label_section_num = tk.Label(section_window, text='Section Number')
+    label_section_num.grid(row=1, column=0)
+
+    label_year = tk.Label(section_window, text='Year')
+    label_year.grid(row=2, column=0)
+
+    label_semester = tk.Label(section_window, text='Semester')
+    label_semester.grid(row=3, column=0)
+
+    label_num_students = tk.Label(section_window, text='Number of Students')
+    label_num_students.grid(row=4, column=0)
+
+    label_instructor_id = tk.Label(section_window, text='Instructor ID')
+    label_instructor_id.grid(row=5, column=0)
+
+    course_num_entry = tk.Entry(section_window)  # Entry field for course number
+    course_num_entry.grid(row=0, column=1)
+
+    section_num_entry = tk.Entry(section_window)  # Entry field for section number
+    section_num_entry.grid(row=1, column=1)
+
+    year_entry = tk.Entry(section_window)  # Entry field for year
+    year_entry.grid(row=2, column=1)
+
+    semester_entry = tk.Entry(section_window)  # Entry field for semester
+    semester_entry.grid(row=3, column=1)
+
+    num_students_entry = tk.Entry(section_window)  # Entry field for number of students
+    num_students_entry.grid(row=4, column=1)
+
+    instructor_id_entry = tk.Entry(section_window)  # Entry field for instructor ID
+    instructor_id_entry.grid(row=5, column=1)
+
+    submit_button = tk.Button(section_window, text="Submit", command=lambda: submit_section(conn))
+    submit_button.grid(row=6, column=1, pady=10)
+
+    def submit_section(conn):
+        course_num = course_num_entry.get()
+        section_num = section_num_entry.get()
+        year = year_entry.get()
+        semester = semester_entry.get()
+        num_students = num_students_entry.get()
+        instructor_id = instructor_id_entry.get()
+        cursor = conn.cursor()
+
+        if course_num and section_num and year and semester and num_students and instructor_id:
+            try: 
+                section_insert_query = "INSERT INTO section (course_num, section_num, year, semester, num_students, instructor_id) VALUES (%s, %s, %s, %s, %s, %s)"
+                cursor.execute(section_insert_query, (course_num, section_num, year, semester, num_students, instructor_id))
+                conn.commit()
+                print("Section added successfully!")
+                section_window.destroy()
+            except mysql.connector.Error as e:
+                print(f"Error: {e}")
+        else:
+            print("Please fill in all fields.")
+
 
 def enter_evaluation(data_entry_window):
     return
