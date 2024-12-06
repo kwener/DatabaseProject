@@ -93,6 +93,20 @@ def create_tables(conn):
     
     cursor.execute(create_section)
 
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM information_schema.statistics
+        WHERE table_name = 'section' AND index_name = 'idx_section_course';
+    """)
+
+    index_exists = cursor.fetchone()[0] > 0
+    if not index_exists:
+        create_index = """
+            CREATE INDEX IF NOT EXISTS idx_section_course ON section(section_num, course_num
+            );
+            """
+        cursor.execute(create_index)
+
     create_degree = """
             CREATE TABLE IF NOT EXISTS degree (
                 degree_name VARCHAR(200),
@@ -119,21 +133,20 @@ def create_tables(conn):
 
 #how do i do delete on cascade if the combo is deleted?
     create_goal = """
-            CREATE TABLE IF NOT EXISTS degree (
+            CREATE TABLE IF NOT EXISTS goal (
                 goal_num CHAR(4),
                 degree_name VARCHAR(200),
                 degree_level VARCHAR(200),
                 description VARCHAR(500), 
                 PRIMARY KEY(goal_num, degree_name, degree_level),
-                FOREIGN KEY (degree_name) REFERENCES degree(degree_name) ON DELETE CASCADE,
-                FOREIGN KEY (degree_level) REFERENCES degree(degree_level) ON DELETE CASCADE
+                FOREIGN KEY (degree_name, degree_level) REFERENCES degree(degree_name, degree_level) ON DELETE CASCADE
             );
             """
     cursor.execute(create_goal)
 
 
     create_evaluation = """
-            CREATE TABLE IF NOT EXISTS degree (
+            CREATE TABLE IF NOT EXISTS evaluation (
                 section_num INT,
                 course_num VARCHAR(10),
                 goal_num CHAR(4),
@@ -168,6 +181,7 @@ def data_entry_window(conn):
     tk.Button(data_entry_window, text="Enter Course", command=lambda: enter_course(data_entry_window, conn)).pack(pady=10)
     tk.Button(data_entry_window, text="Enter Instructor", command=lambda: enter_instructor(data_entry_window, conn)).pack(pady=10)
     tk.Button(data_entry_window, text="Enter Section", command=lambda: enter_section(data_entry_window, conn)).pack(pady=10)
+    tk.Button(data_entry_window, text="Enter Goals", command=lambda: enter_goals(data_entry_window, conn)).pack(pady=10)
     tk.Button(data_entry_window, text="Enter Evaluation", command=lambda: enter_evaluation(data_entry_window, conn)).pack(pady=10)
 
 
@@ -350,13 +364,64 @@ def enter_section(data_entry_window, conn):
         else:
             print("Please fill in all fields.")
 
+def enter_goals(data_entry_window, conn):
+    goals_window = tk.Toplevel()
+    goals_window.title("Enter Goals")
+
+    label_goal_num = tk.Label(goals_window, text='Goal Number')
+    label_goal_num.grid(row=0, column=0)
+
+    label_degree_name = tk.Label(goals_window, text='Degree Name')
+    label_degree_name.grid(row=1, column=0)
+
+    label_degree_level = tk.Label(goals_window, text='Degree Level')
+    label_degree_level.grid(row=2, column=0)
+
+    label_description = tk.Label(goals_window, text='Description')
+    label_description.grid(row=3, column=0)
+
+    goal_num_entry = tk.Entry(goals_window)  # Entry field for goal number
+    goal_num_entry.grid(row=0, column=1)
+
+    degree_name_entry = tk.Entry(goals_window)  # Entry field for degree name
+    degree_name_entry.grid(row=1, column=1)
+
+    degree_level_entry = tk.Entry(goals_window)  # Entry field for degree level
+    degree_level_entry.grid(row=2, column=1)
+
+    description_entry = tk.Entry(goals_window)  # Entry field for description
+    description_entry.grid(row=3, column=1)
+
+    submit_button = tk.Button(goals_window, text="Submit", command=lambda: submit_goals(conn))
+    submit_button.grid(row=4, column=1, pady=10)
+
+    def submit_goals(conn):
+        goal_num = goal_num_entry.get()
+        degree_name = degree_name_entry.get()
+        degree_level = degree_level_entry.get()
+        description = description_entry.get()
+        cursor = conn.cursor()
+
+        if goal_num and degree_name and degree_level and description:
+            try: 
+                goals_insert_query = "INSERT INTO goal (goal_num, degree_name, degree_level, description) VALUES (%s, %s, %s, %s)"
+                cursor.execute(goals_insert_query, (goal_num, degree_name, degree_level, description))
+                conn.commit()
+                print("Goal added successfully!")
+                goals_window.destroy()
+            except mysql.connector.Error as e:
+                print(f"Error: {e}")
+        else:
+            print("Please fill in all fields.")
+
+
 
 def enter_evaluation(data_entry_window, conn):
     evaluation_window = tk.Toplevel()
     evaluation_window.title("Evaluation Hub")
 
     tk.Button(evaluation_window, text="View Sections", command=lambda: view_sections(evaluation_window, conn)).pack(pady=10)
-    
+
 
 
     def view_sections(evaluation_window, conn):
@@ -374,6 +439,11 @@ def enter_evaluation(data_entry_window, conn):
 
         instructor_id_entry = tk.Entry(semester_and_instructor_window)  # Entry field for instructor ID
         instructor_id_entry.grid(row=1, column=1)
+                
+        sections_desc = tk.Label(semester_and_instructor_window, text='Sections:')
+        sections_desc.grid(row=3, column=0, columnspan=2)
+        sections_display = tk.Label(semester_and_instructor_window, text="", width=25, wraplength=300, relief="solid", bg="black", anchor="center", justify="center")
+        sections_display.grid(row=4, column=0, columnspan=2, pady=10)
 
         def get_sections():
             semester = semester_entry.get()
@@ -385,6 +455,9 @@ def enter_evaluation(data_entry_window, conn):
                 sections = cursor.fetchall()
                 if sections:
                     print(sections)
+                    sections_text = "\n".join([f"Course: {course}, Section: {section}" for course, section in sections])
+                    sections_display.config(text=sections_text)
+                    semester_and_instructor_window.update_idletasks()
                     return sections
                 else:
                     print("No sections found for this semester and instructor.")
