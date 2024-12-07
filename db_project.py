@@ -299,7 +299,6 @@ def enter_instructor(data_entry_window, conn):
         else:
             print("Please fill in both instructor ID and instructor name.")
 
-
 def enter_section(data_entry_window, conn):
     section_window = tk.Toplevel()
     section_window.title("Enter Section")
@@ -351,6 +350,22 @@ def enter_section(data_entry_window, conn):
         num_students = num_students_entry.get()
         instructor_id = instructor_id_entry.get()
         cursor = conn.cursor()
+
+        if not section_num.isdigit():
+            print("Error: Section number must be an integer.")
+            return
+
+        if not len(year) != 4:
+            print("Error Year must be a 4-digit integer.")
+            return
+
+        if not semester.lower() in ['spring', 'summer', 'fall']:
+            print("Error: Semester must be one of 'Spring', 'Summer', or 'Fall'.")
+            return
+
+        if not num_students.isdigit():
+            print("Error: Number of students must be an integer.")
+            return
 
         if course_num and section_num and year and semester and num_students and instructor_id:
             try: 
@@ -478,6 +493,179 @@ def enter_evaluation(data_entry_window, conn):
     return
 
 
+def query_window(conn):
+    query_window = tk.Toplevel()
+    query_window.title("Query Menu")
+
+    tk.Label(query_window, text="Query Menu", font=("Arial", 16)).pack(pady=10)
+    tk.Button(query_window, text="List Courses for a Degree", width=30,
+              command=lambda: query_courses_by_degree(conn)).pack(pady=5)
+    tk.Button(query_window, text="List Sections by Instructor", width=30,
+              command=lambda: query_sections_by_instructor(conn)).pack(pady=5)
+    tk.Button(query_window, text="Incomplete Evaluations", width=30,
+              command=lambda: query_incomplete_evaluations(conn)).pack(pady=5)
+    tk.Button(query_window, text="List Goals for a Degree", width=30, command=lambda: query_goals_by_degree(conn)).pack(
+        pady=5)
+
+def query_courses_by_degree(conn):
+    degree_window = tk.Toplevel()
+    degree_window.title("Courses by Degree")
+
+    tk.Label(degree_window, text="Degree Name").grid(row=0, column=0)
+    tk.Label(degree_window, text="Degree Level").grid(row=1, column=0)
+
+    degree_name_entry = tk.Entry(degree_window)
+    degree_name_entry.grid(row=0, column=1)
+    degree_level_entry = tk.Entry(degree_window)
+    degree_level_entry.grid(row=1, column=1)
+
+    def execute_query():
+        degree_name = degree_name_entry.get()
+        degree_level = degree_level_entry.get()
+
+        if not degree_name or not degree_level:
+            show_error_message("Both degree name and level are required!")
+            return
+
+        cursor = conn.cursor()
+        query = """
+            SELECT course_num 
+            FROM degree_courses
+            WHERE degree_name = %s AND degree_level = %s
+        """
+        cursor.execute(query, (degree_name, degree_level))
+        courses = cursor.fetchall()
+
+        result_window = tk.Toplevel()
+        result_window.title("Courses Result")
+        if courses:
+            tk.Label(result_window, text="Courses Associated with the Degree:").pack()
+            for course in courses:
+                tk.Label(result_window, text=course[0]).pack()
+        else:
+            tk.Label(result_window, text="No courses found for the specified degree.").pack()
+
+    tk.Button(degree_window, text="Submit", command=execute_query).grid(row=2, column=1)
+
+def query_sections_by_instructor(conn):
+    instructor_window = tk.Toplevel()
+    instructor_window.title("Sections by Instructor")
+
+    tk.Label(instructor_window, text="Instructor ID").grid(row=0, column=0)
+    tk.Label(instructor_window, text="Start Semester (e.g., 2022)").grid(row=1, column=0)
+    tk.Label(instructor_window, text="End Semester (e.g., 2024)").grid(row=2, column=0)
+
+    instructor_id_entry = tk.Entry(instructor_window)
+    instructor_id_entry.grid(row=0, column=1)
+    start_semester_entry = tk.Entry(instructor_window)
+    start_semester_entry.grid(row=1, column=1)
+    end_semester_entry = tk.Entry(instructor_window)
+    end_semester_entry.grid(row=2, column=1)
+
+    def execute_query():
+        instructor_id = instructor_id_entry.get()
+        start_semester = start_semester_entry.get()
+        end_semester = end_semester_entry.get()
+
+        if not instructor_id or not start_semester or not end_semester:
+            show_error_message("All fields are required!")
+            return
+
+        cursor = conn.cursor()
+        query = """
+            SELECT course_num, section_num, year, semester
+            FROM section
+            WHERE instructor_id = %s AND year BETWEEN %s AND %s
+            ORDER BY year, semester
+        """
+        cursor.execute(query, (instructor_id, start_semester, end_semester))
+        sections = cursor.fetchall()
+
+        result_window = tk.Toplevel()
+        result_window.title("Sections Result")
+        if sections:
+            tk.Label(result_window, text="Sections Taught by the Instructor:").pack()
+            for section in sections:
+                section_info = f"Course: {section[0]}, Section: {section[1]}, Year: {section[2]}, Semester: {section[3]}"
+                tk.Label(result_window, text=section_info).pack()
+        else:
+            tk.Label(result_window, text="No sections found for the specified criteria.").pack()
+
+    tk.Button(instructor_window, text="Submit", command=execute_query).grid(row=3, column=1)
+
+def query_incomplete_evaluations(conn):
+    eval_window = tk.Toplevel()
+    eval_window.title("Incomplete Evaluations")
+
+    tk.Label(eval_window, text="Semester (e.g., Spring 2024)").grid(row=0, column=0)
+    semester_entry = tk.Entry(eval_window)
+    semester_entry.grid(row=0, column=1)
+
+    def execute_query():
+        semester = semester_entry.get()
+        if not semester:
+            show_error_message("Semester is required!")
+            return
+
+        cursor = conn.cursor()
+        query = """
+            SELECT course_num, section_num
+            FROM evaluation
+            WHERE semester = %s AND (numA IS NULL OR numB IS NULL OR numC IS NULL OR numF IS NULL)
+        """
+        cursor.execute(query, (semester,))
+        results = cursor.fetchall()
+
+        result_window = tk.Toplevel()
+        result_window.title("Incomplete Evaluations Result")
+        if results:
+            tk.Label(result_window, text="Sections with Incomplete Evaluations:").pack()
+            for result in results:
+                tk.Label(result_window, text=f"Course: {result[0]}, Section: {result[1]}").pack()
+        else:
+            tk.Label(result_window, text="No incomplete evaluations found for the given semester.").pack()
+
+    tk.Button(eval_window, text="Submit", command=execute_query).grid(row=1, column=1)
+
+def query_goals_by_degree(conn):
+    degree_window = tk.Toplevel()
+    degree_window.title("Goals by Degree")
+
+    tk.Label(degree_window, text="Degree Name").grid(row=0, column=0)
+    tk.Label(degree_window, text="Degree Level").grid(row=1, column=0)
+
+    degree_name_entry = tk.Entry(degree_window)
+    degree_name_entry.grid(row=0, column=1)
+    degree_level_entry = tk.Entry(degree_window)
+    degree_level_entry.grid(row=1, column=1)
+
+    def execute_query():
+        degree_name = degree_name_entry.get()
+        degree_level = degree_level_entry.get()
+
+        if not degree_name or not degree_level:
+            show_error_message("Both degree name and level are required!")
+            return
+
+        cursor = conn.cursor()
+        query = """
+            SELECT goal_num, description
+            FROM goal
+            WHERE degree_name = %s AND degree_level = %s
+        """
+        cursor.execute(query, (degree_name, degree_level))
+        goals = cursor.fetchall()
+
+        result_window = tk.Toplevel()
+        result_window.title("Goals Result")
+        if goals:
+            tk.Label(result_window, text="Goals Associated with the Degree:").pack()
+            for goal in goals:
+                tk.Label(result_window, text=f"Goal {goal[0]}: {goal[1]}").pack()
+        else:
+            tk.Label(result_window, text="No goals found for the specified degree.").pack()
+
+    tk.Button(degree_window, text="Submit", command=execute_query).grid(row=2, column=1)
 
 #https://www.geeksforgeeks.org/python-gui-tkinter/
 def main_menu(conn):
@@ -486,7 +674,7 @@ def main_menu(conn):
         data_entry_window(conn)
 
     def open_query_menu():
-        query_window()
+        query_window(conn)
 
     root = tk.Tk()
     root.title("Academic Database Manager")
