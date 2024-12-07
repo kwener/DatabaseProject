@@ -455,10 +455,19 @@ def enter_evaluation(data_entry_window, conn):
         instructor_id_entry = tk.Entry(semester_and_instructor_window)  # Entry field for instructor ID
         instructor_id_entry.grid(row=1, column=1)
                 
-        sections_desc = tk.Label(semester_and_instructor_window, text='Sections:')
-        sections_desc.grid(row=3, column=0, columnspan=2)
-        sections_display = tk.Label(semester_and_instructor_window, text="", width=25, wraplength=300, relief="solid", bg="black", anchor="center", justify="center")
-        sections_display.grid(row=4, column=0, columnspan=2, pady=10)
+        # sections_desc = tk.Label(semester_and_instructor_window, text='Sections:')
+        # sections_desc.grid(row=3, column=0, columnspan=2)
+        # sections_display = tk.Label(semester_and_instructor_window, text="", width=25, wraplength=300, relief="solid", bg="black", anchor="center", justify="center")
+        # sections_display.grid(row=4, column=0, columnspan=2, pady=10)
+
+        sections_var = tk.StringVar()  # Variable to hold selected section
+        sections_dropdown = ttk.Combobox(
+            semester_and_instructor_window, 
+            textvariable=sections_var, 
+            state="readonly",  # Prevents direct user input
+            width=30
+        )
+        sections_dropdown.grid(row=3, column=1, pady=5)
 
         def get_sections():
             semester = semester_entry.get()
@@ -470,9 +479,12 @@ def enter_evaluation(data_entry_window, conn):
                 sections = cursor.fetchall()
                 if sections:
                     print(sections)
-                    sections_text = "\n".join([f"Course: {course}, Section: {section}" for course, section in sections])
-                    sections_display.config(text=sections_text)
-                    semester_and_instructor_window.update_idletasks()
+                    # sections_text = "\n".join([f"Course: {course}, Section: {section}" for course, section in sections])
+                    # sections_display.config(text=sections_text)
+                    # semester_and_instructor_window.update_idletasks()
+                    section_options = [f"Course: {course}, Section: {section}" for course, section in sections]
+                    sections_dropdown["values"] = section_options
+                    sections_var.set(section_options[0])
                     return sections
                 else:
                     print("No sections found for this semester and instructor.")
@@ -481,16 +493,158 @@ def enter_evaluation(data_entry_window, conn):
                 print("Please fill in both semester and instructor ID.")
                 return None
         tk.Button(semester_and_instructor_window, text="Submit", command=get_sections).grid(row=2, column=1, pady=10)
+        tk.Button(semester_and_instructor_window, text="View Evaluation Info", command=lambda: view_eval_info(semester_and_instructor_window, conn)).grid(row=4, column=1, pady=10)
 
-    
+        def view_eval_info(semester_and_instructor_window, conn):
+            section = sections_var.get()
+            if not section:
+                print("Please select a section.")
+                return
 
-            
+            course_num, section_num = section.split(", ")
+            course_num = course_num.split(": ")[1]
+            section_num = section_num.split(": ")[1]
+
+            eval_info_window = tk.Toplevel()
+            eval_info_window.title("Enter Evaluation Info")
+
+            cursor = conn.cursor()
+            query = """
+                SELECT goal_num, degree_name, degree_level, goal_type, suggestions, numA, numB, numC, numF
+                FROM evaluation
+                WHERE course_num = %s AND section_num = %s
+            """
+
+            cursor.execute(query, (course_num, section_num))
+            eval_info = cursor.fetchall()
+
+            if eval_info:
+                tk.Label(eval_info_window, text="Evaluation Info:").grid(row=0, column=0)
+                for eval in eval_info:
+                    eval_text = f"Goal Number: {eval[0]}\nDegree Name: {eval[1]}\nDegree Level: {eval[2]}\nGoal Type: {eval[3]}\nSuggestions: {eval[4]}\nNumber of A Grades: {eval[5]}\nNumber of B Grades: {eval[6]}\nNumber of C Grades: {eval[7]}\nNumber of F Grades: {eval[8]}\n"
+                    tk.Label(eval_info_window, text=eval_text).grid(row=eval_info.index(eval) + 1, column=0)
+            else:
+                tk.Label(eval_info_window, text="No evaluation info found for this section.").grid(row=0, column=0)
+
+            tk.Button(eval_info_window, text="Change/Add Evaluation Info", command=lambda: change_eval_info(eval_info_window, conn)).grid(row=len(eval_info) + 1, column=0, pady=10)
+
+            def change_eval_info(eval_info_window, conn):
+                eval_info_window.destroy()
+                change_eval_window = tk.Toplevel()
+                change_eval_window.title("Change/Add Evaluation Info")
+
+                label_goal_num = tk.Label(change_eval_window, text='Goal Number')
+                label_goal_num.grid(row=0, column=0)
+
+                label_degree_name = tk.Label(change_eval_window, text='Degree Name')
+                label_degree_name.grid(row=1, column=0)
+
+                label_degree_level = tk.Label(change_eval_window, text='Degree Level')
+                label_degree_level.grid(row=2, column=0)
+
+                label_goal_type = tk.Label(change_eval_window, text='Goal Type')
+                label_goal_type.grid(row=3, column=0)
+
+                label_suggestions = tk.Label(change_eval_window, text='Suggestions')
+                label_suggestions.grid(row=4, column=0)
+
+                label_numA = tk.Label(change_eval_window, text='Number of A Grades')
+                label_numA.grid(row=5, column=0)
+
+                label_numB = tk.Label(change_eval_window, text='Number of B Grades')
+                label_numB.grid(row=6, column=0)
+
+                label_numC = tk.Label(change_eval_window, text='Number of C Grades')
+                label_numC.grid(row=7, column=0)
+
+                label_numF = tk.Label(change_eval_window, text='Number of F Grades')
+                label_numF.grid(row=8, column=0)
+
+                goal_num_entry = tk.Entry(change_eval_window)
+                goal_num_entry.grid(row=0, column=1)
+
+                degree_name_entry = tk.Entry(change_eval_window)
+                degree_name_entry.grid(row=1, column=1)
+
+                degree_level_entry = tk.Entry(change_eval_window)
+                degree_level_entry.grid(row=2, column=1)
+
+                goal_type_entry = tk.Entry(change_eval_window)
+                goal_type_entry.grid(row=3, column=1)
+
+                suggestions_entry = tk.Entry(change_eval_window)
+                suggestions_entry.grid(row=4, column=1)
+
+                numA_entry = tk.Entry(change_eval_window)
+                numA_entry.grid(row=5, column=1)
+
+                numB_entry = tk.Entry(change_eval_window)
+                numB_entry.grid(row=6, column=1)
+
+                numC_entry = tk.Entry(change_eval_window)
+                numC_entry.grid(row=7, column=1)
+
+                numF_entry = tk.Entry(change_eval_window)
+                numF_entry.grid(row=8, column=1)
+
+                tk.Button(change_eval_window, text="Submit", command=lambda: submit_eval_info()).grid(row=9, column=1, pady=10)
+
+                def submit_eval_info():
+                    goal_num = goal_num_entry.get()
+                    degree_name = degree_name_entry.get()
+                    degree_level = degree_level_entry.get()
+                    goal_type = goal_type_entry.get()
+                    suggestions = suggestions_entry.get()
+                    numA = numA_entry.get()
+                    numB = numB_entry.get()
+                    numC = numC_entry.get()
+                    numF = numF_entry.get()
+
+                    cursor = conn.cursor()
+
+                    if goal_num and degree_name and degree_level and goal_type and suggestions and numA and numB and numC and numF:
+                        try: 
+                            eval_insert_query = """
+                                INSERT INTO evaluation (section_num, course_num, goal_num, degree_name, degree_level, goal_type, suggestions, numA, numB, numC, numF) 
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            """
+                            cursor.execute(eval_insert_query, (section_num, course_num, goal_num, degree_name, degree_level, goal_type, suggestions, numA, numB, numC, numF))
+                            conn.commit()
+                            print("Evaluation added successfully!")
+                            change_eval_window.destroy()
+                        except mysql.connector.Error as e:
+                            print(f"Error: {e}")
+                    else:
+                        print("Please fill in all fields.")
+        
 
 
         
 
 
-    return
+            # label_goal_num = tk.Label(eval_info_window, text='Goal Number: N/A')
+            # label_goal_num.grid(row=0, column=0)
+
+            # label_goal_type = tk.Label(eval_info_window, text='Goal Type: N/A')
+            # label_goal_type.grid(row=1, column=0)
+
+            # label_suggestions = tk.Label(eval_info_window, text='Suggestions: N/A')
+            # label_suggestions.grid(row=2, column=0)
+
+            # label_numA = tk.Label(eval_info_window, text='Number of A Grades: N/A')
+            # label_numA.grid(row=3, column=0)
+
+            # label_numB = tk.Label(eval_info_window, text='Number of B Grades: N/A')
+            # label_numB.grid(row=4, column=0)
+
+            # label_numC = tk.Label(eval_info_window, text='Number of C Grades: N/A')
+            # label_numC.grid(row=5, column=0)
+
+            # label_numF = tk.Label(eval_info_window, text='Number of F Grades: N/A')
+            # label_numF.grid(row=6, column=0)
+
+            # goal_num_entry = tk.Entry(eval_info_window)
+
 
 
 def query_window(conn):
