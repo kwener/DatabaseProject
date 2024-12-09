@@ -76,6 +76,11 @@ def create_tables(conn):
 
 #made it so if course_num is deleted in course, the section is delected because section cannot exit without its course
 #maybe make it so instructor_id can be added later? a section should prob be able to switch instructors
+    drop_section = """
+    DROP TABLE IF EXISTS section;
+
+"""
+    cursor.execute(drop_section)
 
     create_section= """
         CREATE TABLE IF NOT EXISTS section (
@@ -93,19 +98,18 @@ def create_tables(conn):
     
     cursor.execute(create_section)
 
-    cursor.execute("""
-        SELECT COUNT(*)
-        FROM information_schema.statistics
-        WHERE table_name = 'section' AND index_name = 'idx_section_course';
-    """)
+    # cursor.execute("""
+    #     SELECT COUNT(*)
+    #     FROM information_schema.statistics
+    #     WHERE table_name = 'section' AND index_name = 'idx_section_course';
+    # """)
 
-    index_exists = cursor.fetchone()[0] > 0
-    if not index_exists:
-        create_index = """
-            CREATE INDEX IF NOT EXISTS idx_section_course ON section(section_num, course_num
-            );
-            """
-        cursor.execute(create_index)
+    # index_exists = cursor.fetchone()[0] > 0
+    # if not index_exists:
+    #     create_index = """
+    #         CREATE INDEX idx_section_course ON section(section_num, course_num);
+    #         """
+    #     cursor.execute(create_index)
 
     create_degree = """
             CREATE TABLE IF NOT EXISTS degree (
@@ -145,28 +149,56 @@ def create_tables(conn):
     cursor.execute(create_goal)
 
 
-    create_evaluation = """
-            CREATE TABLE IF NOT EXISTS evaluation (
-                section_num INT,
-                course_num VARCHAR(10),
-                goal_num CHAR(4),
-                degree_name VARCHAR(200),
-                degree_level VARCHAR(200),
-                goal_type VARCHAR(200),
-                suggestions VARCHAR(500),
-                numA int,
-                numB int,
-                numC int,
-                numF int,
-                PRIMARY KEY(goal_num, degree_name, degree_level, section_num, course_num),
-                FOREIGN KEY (degree_name, degree_level) 
-                    REFERENCES degree(degree_name, degree_level) ON DELETE CASCADE,
-                FOREIGN KEY (goal_num) REFERENCES goal(goal_num) ON DELETE CASCADE,
-                FOREIGN KEY (section_num, course_num) 
-                    REFERENCES section(section_num, course_num) ON DELETE CASCADE
-            );
-            """
-    cursor.execute(create_evaluation)
+    # create_evaluation = """
+    #         CREATE TABLE IF NOT EXISTS evaluation (
+    #             section_num INT,
+    #             course_num VARCHAR(10),
+    #             goal_num CHAR(4),
+    #             degree_name VARCHAR(200),
+    #             degree_level VARCHAR(200),
+    #             goal_type VARCHAR(200),
+    #             suggestions VARCHAR(500),
+    #             numA int,
+    #             numB int,
+    #             numC int,
+    #             numF int,
+    #             PRIMARY KEY(goal_num, degree_name, degree_level, section_num, course_num),
+    #             FOREIGN KEY (degree_name, degree_level) 
+    #                 REFERENCES degree(degree_name, degree_level) ON DELETE CASCADE,
+    #             FOREIGN KEY (goal_num, degree_name, degree_level) REFERENCES goal(goal_num, degree_name, degree_level) ON DELETE CASCADE,
+    #             FOREIGN KEY (section_num, course_num) 
+    #                 REFERENCES section(section_num, course_num) ON DELETE CASCADE
+    #         );
+    #         """
+    drop_eval = """
+    DROP TABLE IF EXISTS evaluation;
+
+"""
+    cursor.execute(drop_eval)
+
+    # create_evaluation = """
+    #         CREATE TABLE IF NOT EXISTS evaluation (
+    #             section_num INT,
+    #             year INT,
+    #             semester VARCHAR(8),
+    #             course_num VARCHAR(10),
+    #             goal_num CHAR(4),
+    #             degree_name VARCHAR(200),
+    #             degree_level VARCHAR(200),
+    #             goal_type VARCHAR(200),
+    #             suggestions VARCHAR(500),
+    #             numA int,
+    #             numB int,
+    #             numC int,
+    #             numF int,
+    #             PRIMARY KEY(goal_num, degree_name, degree_level, section_num, course_num, year, semester),
+    #             FOREIGN KEY (goal_num, degree_name, degree_level) REFERENCES goal(goal_num, degree_name, degree_level) ON DELETE CASCADE,
+    #             FOREIGN KEY (section_num, course_num, year, semester) 
+    #                 REFERENCES section(section_num, course_num, year, semester) ON DELETE CASCADE
+    #         );
+    #         """
+    
+    # cursor.execute(create_evaluation)
 
     print("Tables created successfully!")
 
@@ -840,6 +872,7 @@ def main_menu(conn):
     tk.Button(root, text="Query Menu", width=20, command=open_query_menu).pack(pady=10)
 
     root.mainloop()
+
 
 def main():
     conn = connect_to_database()
