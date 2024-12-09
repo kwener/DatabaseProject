@@ -85,7 +85,7 @@ def create_tables(conn):
     create_section= """
         CREATE TABLE IF NOT EXISTS section (
             course_num VARCHAR(10),
-            section_num int,
+            section_num int(3),
             year int,
             semester VARCHAR(8),
             num_students int,
@@ -178,7 +178,7 @@ def create_tables(conn):
 
     # create_evaluation = """
     #         CREATE TABLE IF NOT EXISTS evaluation (
-    #             section_num INT,
+    #             section_num INT(3),
     #             year INT,
     #             semester VARCHAR(8),
     #             course_num VARCHAR(10),
@@ -193,6 +193,7 @@ def create_tables(conn):
     #             numF int,
     #             PRIMARY KEY(goal_num, degree_name, degree_level, section_num, course_num, year, semester),
     #             FOREIGN KEY (goal_num, degree_name, degree_level) REFERENCES goal(goal_num, degree_name, degree_level) ON DELETE CASCADE,
+    #             FOREIGN KEY (course_num, degree_name, degree_level) REFERENCES degree_courses(course_num, degree_name, degree_level) ON DELETE CASCADE,
     #             FOREIGN KEY (section_num, course_num, year, semester) 
     #                 REFERENCES section(section_num, course_num, year, semester) ON DELETE CASCADE
     #         );
@@ -247,11 +248,52 @@ def enter_degree(data_entry_window, conn):
                 cursor.execute(deg_insert_query, (degree_name, degree_level))
                 conn.commit()
                 print("Degree added successfully!")
-                degree_window.destroy()
+                associate_courses(conn, degree_name, degree_level)
+                #degree_window.destroy()
             except mysql.connector.Error as e:
                 print(f"Error: {e}")
         else:
             print("Please fill in both degree name and degree level.")
+    def associate_courses(conn, degree_name, degree_level):
+
+        course_window = tk.Toplevel()
+        course_window.title("Associate Courses")
+
+        tk.Label(course_window, text = "Select Existing Courses").grid(row = 0, column = 0)
+
+        cursor = conn.cursor()
+        cursor.execute ("SELECT course_num, name FROM course")
+        courses = cursor.fetchall()
+
+        course_listbox = tk.Listbox(course_window, selectmode = tk.MULTIPLE, width = 50)
+        for course in courses:
+            course_listbox.insert(tk.END, f"{course[0]} :{course[1]}")
+            
+        course_listbox.grid(row = 1, column = 0, pady = 10)
+
+        def add_selected_courses():
+            selected_indices = course_listbox.curselection()
+            for index in selected_indices:
+                course_num = courses[index][0]
+                try:
+                    insert_course_deg = """
+                    INSERT INTO degree_course (degree_name, degree_level, course_num)
+                    VALUES (%s, %s, %s)
+                    """
+
+                    cursor.execute(insert_course_deg, (degree_name, degree_level, course_num))
+                except mysql.connector.Error as e:
+                    print(f"Error adding course {course_num}: {e}")
+
+            conn.commit()
+            print("Courses associated successfully!")
+            course_window.destroy()
+
+        tk.Button(course_window, text="Add Selected Courses", command=add_selected_courses).grid(row=2, column=0)
+
+                
+                    
+
 
         # submit_button = tk.Button(degree_window, text="Submit", command=lambda: submit_degree(cursor))
         # submit_button.grid(row=2, column=1, pady=10)
@@ -387,7 +429,7 @@ def enter_section(data_entry_window, conn):
             print("Error: Section number must be an integer.")
             return
 
-        if not len(year) != 4:
+        if not len(year) == 4:
             print("Error Year must be a 4-digit integer.")
             return
 
