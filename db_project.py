@@ -602,7 +602,7 @@ def enter_evaluation(data_entry_window, conn):
 
                     cursor = conn.cursor()
 
-                    if goal_num and degree_name and degree_level and goal_type and suggestions and numA and numB and numC and numF:
+                    if goal_num or degree_name or degree_level or goal_type or suggestions or numA or numB or numC or numF:
                         try: 
                             eval_insert_query = """
                                 INSERT INTO evaluation (section_num, course_num, goal_num, degree_name, degree_level, goal_type, suggestions, numA, numB, numC, numF) 
@@ -615,7 +615,7 @@ def enter_evaluation(data_entry_window, conn):
                         except mysql.connector.Error as e:
                             print(f"Error: {e}")
                     else:
-                        print("Please fill in all fields.")
+                        print("Please fill in at least one field.")
         
 
 
