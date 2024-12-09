@@ -54,6 +54,10 @@ def connect_to_database():
 
 def create_tables(conn):
     cursor = conn.cursor()
+    drop_tables = """
+    DROP TABLE IF EXISTS evaluation, section, degree_courses, goal, degree, instructor, course;
+"""
+    cursor.execute(drop_tables)
     
     #not sure if i need not null for name 
     create_course= """
@@ -77,7 +81,6 @@ def create_tables(conn):
 #made it so if course_num is deleted in course, the section is delected because section cannot exit without its course
 #maybe make it so instructor_id can be added later? a section should prob be able to switch instructors
 
-
     create_section= """
         CREATE TABLE IF NOT EXISTS section (
             course_num VARCHAR(10),
@@ -89,7 +92,7 @@ def create_tables(conn):
             PRIMARY KEY(course_num, section_num, year, semester),
             FOREIGN KEY (course_num) REFERENCES course(course_num) ON DELETE CASCADE,
             FOREIGN KEY (instructor_id) REFERENCES instructor(instructor_id) ON DELETE CASCADE,
-            INDEX idx_section_composite (section_num, course_num, year, semester)
+            UNIQUE INDEX idx_section_composite (section_num, course_num, year, semester)
         );
         """
     
@@ -191,12 +194,13 @@ def create_tables(conn):
                 PRIMARY KEY(goal_num, degree_name, degree_level, section_num, course_num, year, semester),
                 FOREIGN KEY (goal_num, degree_name, degree_level) REFERENCES goal(goal_num, degree_name, degree_level) ON DELETE CASCADE,
                 FOREIGN KEY (course_num, degree_name, degree_level) REFERENCES degree_courses(course_num, degree_name, degree_level) ON DELETE CASCADE,
-                FOREIGN KEY (section_num, course_num, year, semester) 
-                    REFERENCES section(section_num, course_num, year, semester) ON DELETE CASCADE
+                FOREIGN KEY (course_num, section_num, year, semester) 
+                    REFERENCES section(course_num, section_num, year, semester) ON DELETE CASCADE
             );
             """
     
     cursor.execute(create_evaluation)
+
 
     print("Tables created successfully!")
 
@@ -245,16 +249,35 @@ def enter_degree(data_entry_window, conn):
                 cursor.execute(deg_insert_query, (degree_name, degree_level))
                 conn.commit()
                 print("Degree added successfully!")
-                associate_courses(conn, degree_name, degree_level)
+                associate_courses_options(conn, degree_name, degree_level)
                 #degree_window.destroy()
             except mysql.connector.Error as e:
                 print(f"Error: {e}")
         else:
             print("Please fill in both degree name and degree level.")
+    def associate_courses_options(conn, degree_name, degree_level):
+        association_window = tk.Toplevel()
+        association_window.title("Do you want to associate courses with this degree? ")
+        tk.Label(association_window, text="Choose an option to associate courses with the degree:").grid(row=0, column=0, pady=10)
+
+        def associate_existing():
+            associate_courses(conn, degree_name, degree_level)
+            association_window.destroy()
+
+        def create_new_course():
+            create_new_course_window(conn, degree_name, degree_level)
+            association_window.destroy()
+
+        tk.Button(association_window, text="Associate Existing Courses", command=associate_existing).grid(row=1, column=0, pady=10)
+        tk.Button(association_window, text="Create New Course", command=create_new_course).grid(row=2, column=0, pady=10)
+
+
+
+
     def associate_courses(conn, degree_name, degree_level):
 
         course_window = tk.Toplevel()
-        course_window.title("Associate Courses")
+        course_window.title("Associate Existing Courses")
 
         tk.Label(course_window, text = "Select Existing Courses").grid(row = 0, column = 0)
 
@@ -288,8 +311,55 @@ def enter_degree(data_entry_window, conn):
 
         tk.Button(course_window, text="Add Selected Courses", command=add_selected_courses).grid(row=2, column=0)
 
-                
-                    
+
+    # Create new course and associate it with degree
+    def create_new_course_window(conn, degree_name, degree_level):
+        new_course_window = tk.Toplevel()
+        new_course_window.title("Create New Course")
+
+        tk.Label(new_course_window, text="Enter New Course Information").grid(row=0, column=0, pady=10)
+
+        new_course_num_label = tk.Label(new_course_window, text="Course Number")
+        new_course_num_label.grid(row=1, column=0)
+        new_course_num_entry = tk.Entry(new_course_window)
+        new_course_num_entry.grid(row=1, column=1)
+
+        new_course_name_label = tk.Label(new_course_window, text="Course Name")
+        new_course_name_label.grid(row=2, column=0)
+        new_course_name_entry = tk.Entry(new_course_window)
+        new_course_name_entry.grid(row=2, column=1)
+
+        def add_new_course():
+            new_course_num = new_course_num_entry.get()
+            new_course_name = new_course_name_entry.get()
+
+            if new_course_num and new_course_name:
+                try:
+                    cursor = conn.cursor()
+                    # Insert new course into the 'course' table
+                    insert_new_course_query = """
+                    INSERT INTO course (course_num, name) VALUES (%s, %s)
+                    """
+                    cursor.execute(insert_new_course_query, (new_course_num, new_course_name))
+                    conn.commit()
+                    print(f"New course {new_course_num} added successfully!")
+
+                    # Now associate this new course with the degree
+                    insert_course_deg = """
+                    INSERT INTO degree_course (degree_name, degree_level, course_num)
+                    VALUES (%s, %s, %s)
+                    """
+                    cursor.execute(insert_course_deg, (degree_name, degree_level, new_course_num))
+                    conn.commit()
+                    print("New course associated with the degree successfully!")
+
+                    new_course_window.destroy()  # Close the window after adding
+                except mysql.connector.Error as e:
+                    print(f"Error adding new course: {e}")
+            else:
+                print("Please provide both course number and course name.")
+
+        tk.Button(new_course_window, text="Add New Course", command=add_new_course).grid(row=3, column=0, pady=10)       
 
 
         # submit_button = tk.Button(degree_window, text="Submit", command=lambda: submit_degree(cursor))
