@@ -446,7 +446,7 @@ def enter_section(data_entry_window, conn):
                 print("Section added successfully!")
                 section_window.destroy()
             except mysql.connector.Error as e:
-                print(f"Error: {e}")
+                print(f"Error: {e}\nPlease ensure that both course number and instructor id have already been added to the table!")
         else:
             print("Please fill in all fields.")
 
@@ -721,14 +721,18 @@ def query_window(conn):
     query_window.title("Query Menu")
 
     tk.Label(query_window, text="Query Menu", font=("Arial", 16)).pack(pady=10)
+
     tk.Button(query_window, text="List Courses for a Degree", width=30,
               command=lambda: query_courses_by_degree(conn)).pack(pady=5)
+    tk.Button(query_window, text="List Sections for a Degree", width=30,
+              command=lambda: query_sections_by_degree(conn)).pack(pady=5)
+    tk.Button(query_window, text="List Sections by Semesters", width=30,
+              command=lambda: query_sections_by_semesters(conn)).pack(pady=5)
     tk.Button(query_window, text="List Sections by Instructor", width=30,
               command=lambda: query_sections_by_instructor(conn)).pack(pady=5)
     tk.Button(query_window, text="Incomplete Evaluations", width=30,
               command=lambda: query_incomplete_evaluations(conn)).pack(pady=5)
-    tk.Button(query_window, text="List Goals for a Degree", width=30, command=lambda: query_goals_by_degree(conn)).pack(
-        pady=5)
+    tk.Button(query_window, text="List Goals for a Degree", width=30, command=lambda: query_goals_by_degree(conn)).pack(pady=5)
 
 def query_courses_by_degree(conn):
     degree_window = tk.Toplevel()
@@ -769,6 +773,135 @@ def query_courses_by_degree(conn):
             tk.Label(result_window, text="No courses found for the specified degree.").pack()
 
     tk.Button(degree_window, text="Submit", command=execute_query).grid(row=2, column=1)
+
+def query_sections_by_degree(conn):
+    window = tk.Toplevel()
+    window.title("Sections by Degree")
+
+    tk.Label(window, text="Degree Name").grid(row=0, column=0)
+    tk.Label(window, text="Degree Level").grid(row=1, column=0)
+    tk.Label(window, text="Start Year").grid(row=2, column=0)
+    tk.Label(window, text="End Year").grid(row=3, column=0)
+
+    degree_name_entry = tk.Entry(window)
+    degree_name_entry.grid(row=0, column=1)
+    degree_level_entry = tk.Entry(window)
+    degree_level_entry.grid(row=1, column=1)
+    start_year_entry = tk.Entry(window)
+    start_year_entry.grid(row=2, column=1)
+    end_year_entry = tk.Entry(window)
+    end_year_entry.grid(row=3, column=1)
+
+    def execute_query():
+        degree_name = degree_name_entry.get().strip()
+        degree_level = degree_level_entry.get().strip()
+        start_year = start_year_entry.get().strip()
+        end_year = end_year_entry.get().strip()
+
+        if not degree_name or not degree_level or not start_year or not end_year:
+            print("All fields are required!")
+            return
+
+        try:
+            # Ensure year inputs are integers
+            start_year = int(start_year)
+            end_year = int(end_year)
+
+            cursor = conn.cursor()
+            query = """
+                SELECT s.course_num, s.section_num, s.year, s.semester, s.num_students, s.instructor_id
+                FROM section s
+                JOIN degree_courses dc ON s.course_num = dc.course_num
+                WHERE dc.degree_name = %s AND dc.degree_level = %s
+                  AND s.year BETWEEN %s AND %s
+                ORDER BY s.year ASC, s.semester ASC
+            """
+            cursor.execute(query, (degree_name, degree_level, start_year, end_year))
+            sections = cursor.fetchall()
+
+            result_window = tk.Toplevel()
+            result_window.title("Sections Result")
+
+            if sections:
+                tk.Label(result_window, text="Sections:").grid(row=0, column=0, columnspan=2)
+                for idx, section in enumerate(sections, start=1):
+                    text = f"Course: {section[0]}, Section: {section[1]}, Year: {section[2]}, Semester: {section[3]}, Students: {section[4]}, Instructor: {section[5]}"
+                    tk.Label(result_window, text=text).grid(row=idx, column=0, columnspan=2)
+            else:
+                tk.Label(result_window, text="No sections found for the specified degree and time range.").grid(row=0, column=0, columnspan=2)
+
+        except ValueError:
+            print("Start year and end year must be valid integers!")
+        except Exception as e:
+            print(f"Error: {e}")
+
+    tk.Button(window, text="Submit", command=execute_query).grid(row=4, column=1)
+
+def query_sections_by_semesters(conn):
+    window = tk.Toplevel()
+    window.title("Sections by Semesters")
+
+    tk.Label(window, text="Course").grid(row=0, column=0)
+    tk.Label(window, text="Start Semester").grid(row=1, column=0)
+    tk.Label(window, text="End Semester").grid(row=2, column=0)
+    tk.Label(window, text="Start Year").grid(row=3, column=0)
+    tk.Label(window, text="End Year").grid(row=4, column=0)
+
+    course_name = tk.Entry(window)
+    course_name.grid(row=0, column=1)
+    start_semester = tk.Entry(window)
+    start_semester.grid(row=1, column=1)
+    end_semester = tk.Entry(window)
+    end_semester.grid(row=2, column=1)
+    start_year = tk.Entry(window)
+    start_year.grid(row=3, column=1)
+    end_year = tk.Entry(window)
+    end_year.grid(row=4, column=1)
+
+    def execute_query():
+        course = course_name.get().strip()
+        start_sem = start_semester.get().strip()
+        end_sem = end_semester.get().strip()
+        start_yr = start_year.get().strip()
+        end_yr = end_year.get().strip()
+
+        if not (course and start_sem and end_sem and start_yr and end_yr):
+            tk.Label(window, text="All fields are required!").grid(row=5, column=0, columnspan=2)
+            return
+
+        try:
+            # Convert years to integers
+            start_yr = int(start_yr)
+            end_yr = int(end_yr)
+
+            # Construct the query
+            query = f"""
+                SELECT section_num
+                FROM section
+                WHERE course_num = %s 
+                  AND year BETWEEN %s AND %s
+                  AND semester >= %s
+                  AND semester <= %s
+            """
+            params = [course, start_yr, end_yr, start_sem, end_sem]
+
+            # Execute query
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+            results = cursor.fetchall()
+
+            # Display results
+            if results:
+                for idx, row in enumerate(results, start=6):
+                    tk.Label(window, text=str(row)).grid(row=idx, column=0, columnspan=2)
+            else:
+                tk.Label(window, text="No sections found!").grid(row=5, column=0, columnspan=2)
+
+        except Exception as e:
+            tk.Label(window, text=f"Error: {e}").grid(row=5, column=0, columnspan=2)
+
+    tk.Button(window, text="Submit", command=execute_query).grid(row=5, column=1)
+
 
 def query_sections_by_instructor(conn):
     instructor_window = tk.Toplevel()
