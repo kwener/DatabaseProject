@@ -98,19 +98,6 @@ def create_tables(conn):
     
     cursor.execute(create_section)
 
-    # cursor.execute("""
-    #     SELECT COUNT(*)
-    #     FROM information_schema.statistics
-    #     WHERE table_name = 'section' AND index_name = 'idx_section_course';
-    # """)
-
-    # index_exists = cursor.fetchone()[0] > 0
-    # if not index_exists:
-    #     create_index = """
-    #         CREATE INDEX idx_section_course ON section(section_num, course_num);
-    #         """
-    #     cursor.execute(create_index)
-
     create_degree = """
             CREATE TABLE IF NOT EXISTS degree (
                 degree_name VARCHAR(200),
@@ -148,28 +135,6 @@ def create_tables(conn):
             """
     cursor.execute(create_goal)
 
-
-    # create_evaluation = """
-    #         CREATE TABLE IF NOT EXISTS evaluation (
-    #             section_num INT,
-    #             course_num VARCHAR(10),
-    #             goal_num CHAR(4),
-    #             degree_name VARCHAR(200),
-    #             degree_level VARCHAR(200),
-    #             goal_type VARCHAR(200),
-    #             suggestions VARCHAR(500),
-    #             numA int,
-    #             numB int,
-    #             numC int,
-    #             numF int,
-    #             PRIMARY KEY(goal_num, degree_name, degree_level, section_num, course_num),
-    #             FOREIGN KEY (degree_name, degree_level) 
-    #                 REFERENCES degree(degree_name, degree_level) ON DELETE CASCADE,
-    #             FOREIGN KEY (goal_num, degree_name, degree_level) REFERENCES goal(goal_num, degree_name, degree_level) ON DELETE CASCADE,
-    #             FOREIGN KEY (section_num, course_num) 
-    #                 REFERENCES section(section_num, course_num) ON DELETE CASCADE
-    #         );
-    #         """
     drop_eval = """
     DROP TABLE IF EXISTS evaluation;
 
