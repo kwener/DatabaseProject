@@ -76,11 +76,7 @@ def create_tables(conn):
 
 #made it so if course_num is deleted in course, the section is delected because section cannot exit without its course
 #maybe make it so instructor_id can be added later? a section should prob be able to switch instructors
-    drop_section = """
-    DROP TABLE IF EXISTS section;
 
-"""
-    cursor.execute(drop_section)
 
     create_section= """
         CREATE TABLE IF NOT EXISTS section (
@@ -92,7 +88,8 @@ def create_tables(conn):
             instructor_id VARCHAR(10),
             PRIMARY KEY(course_num, section_num, year, semester),
             FOREIGN KEY (course_num) REFERENCES course(course_num) ON DELETE CASCADE,
-            FOREIGN KEY (instructor_id) REFERENCES instructor(instructor_id) ON DELETE CASCADE
+            FOREIGN KEY (instructor_id) REFERENCES instructor(instructor_id) ON DELETE CASCADE,
+            INDEX idx_section_composite (section_num, course_num, year, semester)
         );
         """
     
@@ -176,30 +173,30 @@ def create_tables(conn):
 """
     cursor.execute(drop_eval)
 
-    # create_evaluation = """
-    #         CREATE TABLE IF NOT EXISTS evaluation (
-    #             section_num INT(3),
-    #             year INT,
-    #             semester VARCHAR(8),
-    #             course_num VARCHAR(10),
-    #             goal_num CHAR(4),
-    #             degree_name VARCHAR(200),
-    #             degree_level VARCHAR(200),
-    #             goal_type VARCHAR(200),
-    #             suggestions VARCHAR(500),
-    #             numA int,
-    #             numB int,
-    #             numC int,
-    #             numF int,
-    #             PRIMARY KEY(goal_num, degree_name, degree_level, section_num, course_num, year, semester),
-    #             FOREIGN KEY (goal_num, degree_name, degree_level) REFERENCES goal(goal_num, degree_name, degree_level) ON DELETE CASCADE,
-    #             FOREIGN KEY (course_num, degree_name, degree_level) REFERENCES degree_courses(course_num, degree_name, degree_level) ON DELETE CASCADE,
-    #             FOREIGN KEY (section_num, course_num, year, semester) 
-    #                 REFERENCES section(section_num, course_num, year, semester) ON DELETE CASCADE
-    #         );
-    #         """
+    create_evaluation = """
+            CREATE TABLE IF NOT EXISTS evaluation (
+                section_num INT(3),
+                year INT,
+                semester VARCHAR(8),
+                course_num VARCHAR(10),
+                goal_num CHAR(4),
+                degree_name VARCHAR(200),
+                degree_level VARCHAR(200),
+                goal_type VARCHAR(200),
+                suggestions VARCHAR(500),
+                numA int,
+                numB int,
+                numC int,
+                numF int,
+                PRIMARY KEY(goal_num, degree_name, degree_level, section_num, course_num, year, semester),
+                FOREIGN KEY (goal_num, degree_name, degree_level) REFERENCES goal(goal_num, degree_name, degree_level) ON DELETE CASCADE,
+                FOREIGN KEY (course_num, degree_name, degree_level) REFERENCES degree_courses(course_num, degree_name, degree_level) ON DELETE CASCADE,
+                FOREIGN KEY (section_num, course_num, year, semester) 
+                    REFERENCES section(section_num, course_num, year, semester) ON DELETE CASCADE
+            );
+            """
     
-    # cursor.execute(create_evaluation)
+    cursor.execute(create_evaluation)
 
     print("Tables created successfully!")
 
@@ -719,8 +716,6 @@ def enter_evaluation(data_entry_window, conn):
 
             # goal_num_entry = tk.Entry(eval_info_window)
 
-
-
 def query_window(conn):
     query_window = tk.Toplevel()
     query_window.title("Query Menu")
@@ -752,7 +747,7 @@ def query_courses_by_degree(conn):
         degree_level = degree_level_entry.get()
 
         if not degree_name or not degree_level:
-            show_error_message("Both degree name and level are required!")
+            print("Both degree name and level are required!")
             return
 
         cursor = conn.cursor()
@@ -796,7 +791,8 @@ def query_sections_by_instructor(conn):
         end_semester = end_semester_entry.get()
 
         if not instructor_id or not start_semester or not end_semester:
-            show_error_message("All fields are required!")
+            print("All fields are required!")
+            print("All fields are required!")
             return
 
         cursor = conn.cursor()
@@ -832,7 +828,7 @@ def query_incomplete_evaluations(conn):
     def execute_query():
         semester = semester_entry.get()
         if not semester:
-            show_error_message("Semester is required!")
+            print("Semester is required!")
             return
 
         cursor = conn.cursor()
@@ -872,7 +868,7 @@ def query_goals_by_degree(conn):
         degree_level = degree_level_entry.get()
 
         if not degree_name or not degree_level:
-            show_error_message("Both degree name and level are required!")
+            print("Both degree name and level are required!")
             return
 
         cursor = conn.cursor()
