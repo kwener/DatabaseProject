@@ -11,6 +11,12 @@ from tkinter import messagebox
 #you can have same goal code for different degrees
 #one evaluation per goal per section
 
+def is_valid_semester(value):
+    value = value.lower()
+    return value == "fall" or value == "spring" or value == "summer"
+
+def is_valid_year(value):
+    return len(value) == 4 and value >= 1600
 
 def load_config(filename="db_config.json"):
     try:
@@ -19,13 +25,12 @@ def load_config(filename="db_config.json"):
         return config
     
     except FileNotFoundError:
-        print(f"Error: Configuration file '{filename}' not found.")
+        messagebox.showerror("Error", f"Configuration file '{filename}' not found.")
         return None
     
     except json.JSONDecodeError:
-        print("Error: Configuration file is not a valid JSON format.")
+        messagebox.showerror("Error", "Configuration file is not a valid JSON format.")
         return None
-
 
 def connect_to_database():
 # Load database configuration
@@ -45,14 +50,10 @@ def connect_to_database():
             print("Successfully connected to the database!")
             return conn
     except Error as e:
-        print(f"Error: Unable to connect to the database.\n{e}")
+        messagebox.showerror("Error", f"Unable to connect to the database.\n{e}")
         return None
 
     print('Connected to database')
-
-
-
-
 
 def create_tables(conn):
     cursor = conn.cursor()
@@ -120,10 +121,10 @@ def create_tables(conn):
             """
     cursor.execute(create_degree_courses)
 
-#each goal is assoiciated with a degree, each num is unique to the degree
+#each goal is associated with a degree, each num is unique to the degree
 #different degrees can have same goal_num
 
-#how do i do delete on cascade if the combo is deleted?
+#how do I do delete on cascade if the combo is deleted?
     create_goal = """
             CREATE TABLE IF NOT EXISTS goal (
                 goal_num CHAR(4),
@@ -192,15 +193,15 @@ def data_entry_window(conn):
     data_entry_window.title("Data Entry Choices")
     
     # Add buttons for each data type
-    tk.Button(data_entry_window, text="Enter Degree", command=lambda: enter_degree(data_entry_window, conn)).pack(pady=10)
-    tk.Button(data_entry_window, text="Enter Course", command=lambda: enter_course(data_entry_window, conn)).pack(pady=10)
-    tk.Button(data_entry_window, text="Enter Instructor", command=lambda: enter_instructor(data_entry_window, conn)).pack(pady=10)
-    tk.Button(data_entry_window, text="Enter Section", command=lambda: enter_section(data_entry_window, conn)).pack(pady=10)
+    tk.Button(data_entry_window, text="Enter Degree", command=lambda: enter_degree(conn)).pack(pady=10)
+    tk.Button(data_entry_window, text="Enter Course", command=lambda: enter_course(conn)).pack(pady=10)
+    tk.Button(data_entry_window, text="Enter Instructor", command=lambda: enter_instructor(conn)).pack(pady=10)
+    tk.Button(data_entry_window, text="Enter Section", command=lambda: enter_section(conn)).pack(pady=10)
     tk.Button(data_entry_window, text="Enter Goals", command=lambda: enter_goals(data_entry_window, conn)).pack(pady=10)
     tk.Button(data_entry_window, text="Enter Evaluation", command=lambda: enter_evaluation(data_entry_window, conn)).pack(pady=10)
     tk.Button(data_entry_window, text="Associate a Course and a Degree", command=lambda: associate_degree_and_course(data_entry_window, conn)).pack(pady=10)
 
-def enter_degree(data_entry_window, conn):
+def enter_degree(conn):
     degree_window = tk.Toplevel()
     degree_window.title("Enter Degree")
 
@@ -233,9 +234,10 @@ def enter_degree(data_entry_window, conn):
                 associate_courses_options(conn, degree_name, degree_level)
                 degree_window.destroy()
             except mysql.connector.Error as e:
-                print(f"Error: {e}")
+                messagebox.showerror("Error", f"{e}")
         else:
-            print("Please fill in both degree name and degree level.")
+            messagebox.showerror("Error", "Please fill in both degree name and degree level.")
+
     def associate_courses_options(conn, degree_name, degree_level):
         association_window = tk.Toplevel()
         association_window.title("Do you want to associate courses with this degree? ")
@@ -286,9 +288,9 @@ def enter_degree(data_entry_window, conn):
                     cursor.execute(insert_course_deg, (degree_name, degree_level, course_num))   
                     
                 except mysql.connector.Error as e:
-                    print(f"Error adding course {course_num}: {e}")
+                    messagebox.showerror("Error", f"Unable to add course {course_num}: {e}")
                 conn.commit()
-                print("Course(s) associated with degree successfully!")
+                messagebox.showinfo("Success", "Course(s) associated with degree!")
 
                 try:
                     get_goal_query = """
@@ -308,16 +310,14 @@ def enter_degree(data_entry_window, conn):
                         cursor.execute(goal_courses_query, (goal_num, degree_name, degree_level, course_num))      
 
                     conn.commit()
-                    print("New course associated with all degree goals successfully!")
+                    messagebox.showinfo("Success", "New course associated with all degree goals!")
 
                 except mysql.connector.Error as e:
                     print(f"Error: {e}")
 
-
             course_window.destroy()
 
         tk.Button(course_window, text="Add Selected Courses", command=add_selected_courses).grid(row=2, column=0)
-
 
     # Create new course and associate it with degree
     def create_new_course_window(conn, degree_name, degree_level):
@@ -349,7 +349,7 @@ def enter_degree(data_entry_window, conn):
                     """
                     cursor.execute(insert_new_course_query, (new_course_num, new_course_name))
                     conn.commit()
-                    print(f"New course {new_course_num} added successfully!")
+                    messagebox.showinfo("Success", f"New course {new_course_num} added!")
 
                     # Now associate this new course with the degree
                     insert_course_deg = """
@@ -358,13 +358,13 @@ def enter_degree(data_entry_window, conn):
                     """
                     cursor.execute(insert_course_deg, (degree_name, degree_level, new_course_num))
                     conn.commit()
-                    print("New course associated with the degree successfully!")
+                    messagebox.showinfo("Success", "New course associated with the degree!")
 
                     new_course_window.destroy()  # Close the window after adding
                 except mysql.connector.Error as e:
-                    print(f"Error adding new course: {e}")
+                    messagebox.showerror("Error", f"adding new course: {e}")
             else:
-                print("Please provide both course number and course name.")
+                messagebox.showerror("Error", "Please provide both course number and course name.")
 
 
             try:
@@ -385,10 +385,10 @@ def enter_degree(data_entry_window, conn):
                     cursor.execute(goal_courses_query, (goal_num, degree_name, degree_level, new_course_num))      
 
                 conn.commit()
-                print("New course associated with all degree goals successfully!")
+                messagebox.showinfo("Success", "New course associated with all degree goals!")
 
             except mysql.connector.Error as e:
-                print(f"Error: {e}")
+                messagebox.showerror("Error", e.msg)
 
 
         tk.Button(new_course_window, text="Add New Course", command=add_new_course).grid(row=3, column=0, pady=10)       
@@ -398,9 +398,7 @@ def enter_degree(data_entry_window, conn):
         # submit_button = tk.Button(degree_window, text="Submit", command=lambda: submit_degree(cursor))
         # submit_button.grid(row=2, column=1, pady=10)
 
-
-
-def enter_course(data_entry_window, conn):
+def enter_course(conn):
     course_window = tk.Toplevel()
     course_window.title("Enter Course")
 
@@ -429,7 +427,7 @@ def enter_course(data_entry_window, conn):
                 course_insert_query = "INSERT INTO course (course_num, name) VALUES (%s, %s)"
                 cursor.execute(course_insert_query, (course_num, course_name))
                 conn.commit()
-                print("Course added successfully!")
+                messagebox.showinfo("Success", "Course added!")
                 associate_course_with_degree(conn, course_num, course_name)
                 course_window.destroy()
             except mysql.connector.Error as e:
@@ -466,7 +464,7 @@ def enter_course(data_entry_window, conn):
                     """
                     cursor.execute(insert_course_degree_query, (degree_name, degree_level, course_num))
                     conn.commit()
-                    print(f"Course {course_num} associated with {degree_name} successfully!")
+                    messagebox.showinfo("Success", f"Course {course_num} associated with {degree_name}!")
 
                     try:
                         get_goal_query = """
@@ -488,24 +486,23 @@ def enter_course(data_entry_window, conn):
                             cursor.execute(goal_courses_query, (goal_num[0], degree_name, degree_level, course_num))      
 
                         conn.commit()
-                        print("New course associated with all degree goals successfully!")
+                        messagebox.showinfo("Success", "New course associated with all degree goals!")
 
                     except mysql.connector.Error as e:
-                        print(f"Error: {e}")
+                        messagebox.showerror(e.msg)
 
 
                     association_window.destroy()  # Close the association window
                 except mysql.connector.Error as e:
-                    print(f"Error associating course {course_num} with degree: {e}")
+                    messagebox.showerror("Error", f"Unable to associate course {course_num} with degree: {e}")
             else:
-                print("Please select a degree to associate with the course.")
+                messagebox.showerror("Error", "Please select a degree to associate with the course.")
 
 
             
         tk.Button(association_window, text="Associate", command=add_association).grid(row=2, column=0, pady=10)
-    
 
-def enter_instructor(data_entry_window, conn):
+def enter_instructor(conn):
     instructor_window = tk.Toplevel()
     instructor_window.title("Enter Instructor")
 
@@ -534,14 +531,14 @@ def enter_instructor(data_entry_window, conn):
                 instructor_insert_query = "INSERT INTO instructor (instructor_id, name) VALUES (%s, %s)"
                 cursor.execute(instructor_insert_query, (instructor_id, instructor_name))
                 conn.commit()
-                print("Instructor added successfully!")
+                messagebox.showinfo("Success", "Instructor added!")
                 instructor_window.destroy()
             except mysql.connector.Error as e:
-                print(f"Error: {e}")
+                messagebox.showerror("Error", e.msg)
         else:
-            print("Please fill in both instructor ID and instructor name.")
+            messagebox.showerror("Error", "Please fill in both instructor ID and instructor name.")
 
-def enter_section(data_entry_window, conn):
+def enter_section(conn):
     section_window = tk.Toplevel()
     section_window.title("Enter Section")
 
@@ -641,7 +638,6 @@ def enter_section(data_entry_window, conn):
                 tk.Label(section_window, 
                                 text=f"{e}: Please make sure all values are entered correctly"
                             ).grid(row=7, column=0)
-
 
 
 def associate_degree_and_course(data_entry_window, conn):
@@ -797,8 +793,6 @@ def enter_goals(data_entry_window, conn):
                 print("Please fill in all fields.")
         except Exception as e:
                 tk.Label(goals_window, text=f"{e}: Unable to complete request. Please make sure values were entered correctly!").grid(row=5, column=1, pady=10)
-
-
 
 def enter_evaluation(data_entry_window, conn):
     evaluation_window = tk.Toplevel()
@@ -1088,7 +1082,7 @@ def query_window(conn):
     tk.Button(query_window, text="Incomplete Evaluations", width=30,
               command=lambda: query_incomplete_evaluations(conn)).pack(pady=5)
     tk.Button(query_window, text="F Percentage Query", width=30,
-            command=lambda: query_pertcentage(conn)).pack(pady=5)
+              command=lambda: query_percentage(conn)).pack(pady=5)
 
 def query_courses_by_degree(conn):
     degree_window = tk.Toplevel()
@@ -1139,7 +1133,6 @@ def query_courses_by_degree(conn):
             tk.Label(result_window, text="No courses found for the specified degree.").pack()
 
     tk.Button(degree_window, text="Submit", command=execute_query).grid(row=2, column=1)
-
 
 def query_sections_by_degree(conn):
     window = tk.Toplevel()
@@ -1224,9 +1217,11 @@ def query_goals_by_degree(conn):
             degree_name = degree_name_entry.get()
             degree_level = degree_level_entry.get()
 
-            if not degree_name or not degree_level:
-                tk.Label(degree_window, text="Please enter degree name and level").grid(row=2, column=0)
-                return
+
+        if not degree_name or not degree_level:
+            messagebox.showerror("Error", "Both degree name and level are required!")
+            return
+
 
             cursor = conn.cursor()
             query = """
@@ -1271,7 +1266,7 @@ def query_courses_by_goals(conn):
         goal_number = goal_number_entry.get().strip()
 
         if not degree_name or not degree_level or not goal_number:
-            print("All fields are required!")
+            messagebox.showerror("Error", "All fields are required!")
             return
 
         try:
@@ -1298,7 +1293,7 @@ def query_courses_by_goals(conn):
                 tk.Label(result_window, text="No courses found for the specified degree.").grid(row=0, column=0)
 
         except Exception as e:
-            print(f"Error: {e}")
+            messagebox.showerror("Error", f"{e}")
 
     tk.Button(window, text="Submit", command=execute_query).grid(row=3, column=1)
 
@@ -1346,7 +1341,7 @@ def query_sections_by_semesters(conn):
             # Construct the query
             query = """
                 SELECT section_num, course_num, year, semester,
-                       CASE semester.lower()
+                       CASE semester
                            WHEN 'spring' THEN 1
                            WHEN 'summer' THEN 2
                            WHEN 'fall' THEN 3
@@ -1365,11 +1360,11 @@ def query_sections_by_semesters(conn):
             end_results = []
             for result in results:
                 sem_num = semester_order[result[3].lower()]
-                if (result[2] == start_yr):
+                if result[2] == start_yr:
                     if sem_num >= start_sem_num:
                         end_results.append(result)
 
-                elif (result[2] == end_yr):
+                elif result[2] == end_yr:
                     if sem_num <= end_sem_num:
                         end_results.append(result)
                 else:
@@ -1383,7 +1378,7 @@ def query_sections_by_semesters(conn):
                 tk.Label(window, text="No sections found!").grid(row=6, column=0, columnspan=2)
 
         except Exception as e:
-            tk.Label(window, text=f"Error: {e}").grid(row=5, column=0, columnspan=2)
+            messagebox.showerror("Error", f"{e}")
 
     tk.Button(window, text="Submit", command=execute_query).grid(row=5, column=1)
 
@@ -1446,7 +1441,11 @@ def query_sections_by_instructor(conn):
                 ORDER BY year, semester_order;
             """
             cursor = conn.cursor()
-            cursor.execute(query, (instructor_id, start_semester, end_semester, start_year, end_year))
+            cursor.execute(query, (
+                instructor_id,
+                start_year, start_year, start_semester_num,
+                end_year, end_year, end_semester_num
+            ))
             sections = cursor.fetchall()
 
             end_results = []
@@ -1474,7 +1473,7 @@ def query_sections_by_instructor(conn):
                 tk.Label(result_window, text="No sections found for the specified criteria.").pack()
 
         except Exception as e:
-            tk.Label(instructor_window, text=f"Error: {e}").grid(row=5, column=0, columnspan=2)
+            messagebox.showerror("Error", str(e))
 
     tk.Button(instructor_window, text="Submit", command=execute_query).grid(row=6, column=1)
 
@@ -1482,23 +1481,28 @@ def query_incomplete_evaluations(conn):
     eval_window = tk.Toplevel()
     eval_window.title("Incomplete Evaluations")
 
-    tk.Label(eval_window, text="Semester (e.g., Spring 2024)").grid(row=0, column=0)
+    tk.Label(eval_window, text="Semester").grid(row=0, column=0)
+    tk.Label(eval_window, text="Year").grid(row=1, column=0)
     semester_entry = tk.Entry(eval_window)
     semester_entry.grid(row=0, column=1)
+    year_entry = tk.Entry(eval_window)
+    year_entry.grid(row=1, column=1)
 
     def execute_query():
         semester = semester_entry.get()
-        if not semester:
-            print("Semester is required!")
+        year = year_entry.get()
+
+        if not semester and year:
+            print("All fields are required!")
             return
 
         cursor = conn.cursor()
         query = """
             SELECT course_num, section_num, suggestions
             FROM evaluation
-            WHERE semester = %s AND (numA IS NULL OR numB IS NULL OR numC IS NULL OR numF IS NULL)
+            WHERE semester = %s AND year = %s AND (numA IS NULL OR numB IS NULL OR numC IS NULL OR numF IS NULL)
         """
-        cursor.execute(query, (semester,))
+        cursor.execute(query, (semester, year,))
         results = cursor.fetchall()
 
         result_window = tk.Toplevel()
@@ -1526,10 +1530,10 @@ def query_incomplete_evaluations(conn):
             elif not result[3] and len(result[2]) == 0:
                 tk.Label(result_window, text=f"Course {result[0]}, Section: {result[1]} is not complete, no information added.").pack()
 
-    tk.Button(eval_window, text="Submit", command=execute_query).grid(row=1, column=1)
+    tk.Button(eval_window, text="Submit", command=execute_query).grid(row=2, column=1)
 
 
-def query_pertcentage(conn):
+def query_percentage(conn):
     window = tk.Toplevel()
     window.title("Sections Where F's Percentage Not Reached")
 
