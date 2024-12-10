@@ -1015,6 +1015,8 @@ def query_window(conn):
               command=lambda: query_sections_by_instructor(conn)).pack(pady=5)
     tk.Button(query_window, text="Incomplete Evaluations", width=30,
               command=lambda: query_incomplete_evaluations(conn)).pack(pady=5)
+    tk.Button(query_window, text="F Percentage Query", width=30,
+            command=lambda: query_pertcentage(conn)).pack(pady=5)
 
 def query_courses_by_degree(conn):
     degree_window = tk.Toplevel()
@@ -1405,6 +1407,70 @@ def query_incomplete_evaluations(conn):
                 tk.Label(result_window, text=f"Course {result[0]}, Section: {result[1]} is not complete, no information added.").pack()
 
     tk.Button(eval_window, text="Submit", command=execute_query).grid(row=1, column=1)
+
+
+def query_pertcentage(conn):
+    window = tk.Toplevel()
+    window.title("Sections Where F's Percentage Not Reached")
+
+    tk.Label(window, text="F percentage").grid(row=0, column=0)
+    tk.Label(window, text="Semester").grid(row=1, column=0)
+    tk.Label(window, text="Year").grid(row=2, column=0)
+
+
+    percentage_entry = tk.Entry(window)
+    percentage_entry.grid(row=0, column=1)
+    semester_entry = tk.Entry(window)
+    semester_entry.grid(row=1, column=1)
+    year_entry = tk.Entry(window)
+    year_entry.grid(row=2, column=1)
+
+    def execute_query():
+        cursor = conn.cursor()
+        percentage = percentage_entry.get()
+        semester = semester_entry.get().strip().lower()
+        year = year_entry.get()
+        year = int(year)
+
+        if not percentage or not semester or not year:
+            tk.Label(window, text = 'All fields are required!').grid(row = 4, column = 1)
+        else:
+            get_sections_query = """
+            SELECT * 
+            FROM evaluation
+            WHERE semester = %s
+            AND year = %s
+            """
+
+            cursor.execute(get_sections_query, (semester, year))
+            sections_info = cursor.fetchall()
+            section_results = []
+            for sections in sections_info:
+                if sections[10] and sections[11] and sections[12] and sections[13]:
+                    temp_total = sections[10]+sections[11]+sections[12]+sections[13]
+                    get_percentage = float(sections[13])/float(temp_total)
+                    #10-13
+                    if get_percentage <= percentage:
+                        section_results.append([sections, get_percentage])
+                else:
+                    tk.Label(window, text = 'All grade counts are not entered! Cannot find F percentage. Please complete evaluation!').grid(row = 4, column = 1)
+
+            result_window = tk.Toplevel()
+            result_window.title("Percentage Query Results")
+            if section_results:
+                for result in section_results:
+                    section_info = f"Section num: {result[0][0]}, Course num: {result[0][3]}, Percentage{result[1]}, Semester: {result[2]}"
+                    tk.Label(result_window, text=section_info).pack()
+            else:
+                tk.Label(result_window, text="No sections found for the specified criteria.").pack()
+
+    tk.Button(window, text="Submit", command=execute_query).grid(row=5, column=1)
+
+
+
+
+                
+        
 
 #https://www.geeksforgeeks.org/python-gui-tkinter/
 def main_menu(conn):
