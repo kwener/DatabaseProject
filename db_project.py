@@ -862,14 +862,11 @@ def enter_evaluation(conn):
                 cursor.execute(query, (course_num, section_num))
                 eval_info = cursor.fetchall()
 
-                #is_eval_info = False
-
                 if eval_info:
                     tk.Label(eval_info_window, text="Evaluation Info:").grid(row=0, column=0)
                     for eval in eval_info:
                         eval_text = f"YearL {eval[0]}\nGoal Number: {eval[1]}\nDegree Name: {eval[2]}\nDegree Level: {eval[3]}\nGoal Type: {eval[4]}\nSuggestions: {eval[5]}\nNumber of A Grades: {eval[6]}\nNumber of B Grades: {eval[7]}\nNumber of C Grades: {eval[8]}\nNumber of F Grades: {eval[9]}\n"
                         tk.Label(eval_info_window, text=eval_text).grid(row=eval_info.index(eval) + 1, column=0)
-                    #is_eval_info = True
                         tk.Button(eval_info_window, text="Change Evaluation Info", command=lambda: change_eval_info(eval_info_window, conn, eval_info)).grid(row=len(eval_info) + 2, column=0, pady=10)
                         tk.Button(eval_info_window, text="Duplicate Evaluation onto other Degrees", command=lambda: dupe_eval_info(eval_info_window, conn, eval_info, section_num, course_num, semester)).grid(row=len(eval_info) + 3, column=0, pady=10)
 
@@ -1127,12 +1124,12 @@ def enter_evaluation(conn):
                         """
                         cursor.execute(eval_update_query, (goal_type, suggestions, numA, numB, numC, numF, goal_num, degree_name, degree_level))
                         conn.commit()
-                        print("Evaluation updated successfully!")
+                        messagebox.showinfo("Success", "Evaluation updated!")
                         change_eval_window.destroy()
                     except mysql.connector.Error as e:
-                        print(f"Error: {e}")
+                        messagebox.showerror("Error", e.msg)
                 else:
-                    print("Please fill in at least one field.")
+                    messagebox.showinfo("Incomplete", "Please fill in at least one field")
         
         def dupe_eval_info(eval_info_window, conn, eval_info, section_num, course_num, semester):
             current_eval = eval_info[0]
@@ -1212,10 +1209,10 @@ def enter_evaluation(conn):
 
                     cursor.execute(eval_insert_query, (section_num, current_eval[0], semester, course_num, selected_goal, degree_name, degree_level, current_eval[4], current_eval[5], current_eval[6], current_eval[7], current_eval[8], current_eval[9]))
                     conn.commit()
-                    print("Evaluation duplicated successfully!")
+                    messagebox.showinfo("Success", "Evaluation duplicated!")
                     eval_info_window.destroy()
                 except mysql.connector.Error as e:
-                    print(f"Error: {e}")
+                    messagebox.showerror("Error", e.msg)
 
 
 def query_window(conn):
@@ -1258,7 +1255,7 @@ def query_courses_by_degree(conn):
         degree_level = degree_level_entry.get()
 
         if not degree_name or not degree_level:
-            print("Both degree name and level are required!")
+            messagebox.showinfo("Incomplete", "Both degree name and level are required")
             return
 
         cursor = conn.cursor()
@@ -1273,7 +1270,6 @@ def query_courses_by_degree(conn):
         result_window.title("Courses Result")
         if courses:
             tk.Label(result_window, text="Courses Associated with the Degree:").pack()
-            print(courses)
             iteration = 0
             for course in courses:
                 query1 = """
@@ -1316,7 +1312,7 @@ def query_sections_by_degree(conn):
         end_year = end_year_entry.get().strip()
 
         if not degree_name or not degree_level or not start_year or not end_year:
-            tk.Label(window, text="Please fill out all fields").grid(row=4, column=0)
+            messagebox.showinfo("Incomplete", "Please fill out all fields")
             return
 
         try:
