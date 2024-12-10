@@ -958,7 +958,7 @@ def enter_evaluation(conn):
                 label_suggestions = tk.Label(change_eval_window, text='Suggestions')
                 label_suggestions.grid(row=5, column=0)
 
-                label_suggestions_complete = tk.Label(change_eval_window, text='Suggestions Complete? (Enter 0 for yes and 1 for no)')
+                label_suggestions_complete = tk.Label(change_eval_window, text='Suggestions Complete? (Enter 0 for no and 1 for yes)')
                 label_suggestions_complete.grid(row=6, column=0)
 
                 label_numA = tk.Label(change_eval_window, text='Number of A Grades')
@@ -1324,7 +1324,7 @@ def query_courses_by_degree(conn):
             tk.Label(result_window, text=f"Courses Associated with the {degree_name}, {degree_level} Degree:").pack()
             print(courses)
 
-            tk.Label(result_window, text="Courses Associated with the Degree:").pack()
+
 
             iteration = 0
             for course in courses:
