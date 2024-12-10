@@ -1244,34 +1244,55 @@ def query_sections_by_semesters(conn):
         if not (course and start_sem and end_sem and start_yr and end_yr):
             tk.Label(window, text="All fields are required!").grid(row=5, column=0, columnspan=2)
             return
+        
+        semester_order = {"spring": 1, "summer": 2, "fall": 3}
 
         try:
             # Convert years to integers
             start_yr = int(start_yr)
             end_yr = int(end_yr)
+            start_sem_num = semester_order[start_sem.lower()]
+            end_sem_num = semester_order[end_sem.lower()]
+        
 
             # Construct the query
-            query = f"""
-                SELECT section_num
+            query = """
+                SELECT section_num, course_num, year, semester,
+                       CASE semester
+                           WHEN 'spring' THEN 1
+                           WHEN 'summer' THEN 2
+                           WHEN 'fall' THEN 3
+                       END AS semester_order
                 FROM section
-                WHERE course_num = %s 
+                WHERE course_num = %s
                   AND year BETWEEN %s AND %s
-                  AND semester >= %s
-                  AND semester <= %s
+                ORDER BY year, semester_order;
             """
-            params = [course, start_yr, end_yr, start_sem, end_sem]
-
+        
             # Execute query
             cursor = conn.cursor()
-            cursor.execute(query, params)
+            cursor.execute(query, (course, start_yr, end_yr))
             results = cursor.fetchall()
 
+            end_results = []
+            for result in results:
+                sem_num = semester_order[result[3].lower()]
+                if (result[2] == start_yr):
+                    if sem_num >= start_sem_num:
+                        end_results.append(result)
+
+                elif (result[2] == end_yr):
+                    if sem_num <= end_sem_num:
+                        end_results.append(result)
+                else:
+                    end_results.append(result)
+                
             # Display results
-            if results:
-                for idx, row in enumerate(results, start=6):
-                    tk.Label(window, text=str(row)).grid(row=idx, column=0, columnspan=2)
+            if end_results:
+                for idx, row in enumerate(end_results, start=6):
+                    tk.Label(window, text=f'course num:{row[1]}, section num:{row[0]}, {row[2]} {row[3]}').grid(row=idx, column=0, columnspan=2)
             else:
-                tk.Label(window, text="No sections found!").grid(row=5, column=0, columnspan=2)
+                tk.Label(window, text="No sections found!").grid(row=6, column=0, columnspan=2)
 
         except Exception as e:
             tk.Label(window, text=f"Error: {e}").grid(row=5, column=0, columnspan=2)
