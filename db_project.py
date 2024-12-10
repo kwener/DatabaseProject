@@ -79,7 +79,8 @@ def connect_to_database():
 def create_tables(conn):
     cursor = conn.cursor()
 
-    #drop_all_tables(cursor)
+    #
+    # drop_all_tables(cursor)
     
     #not sure if i need not null for name 
     create_course= """
@@ -952,8 +953,8 @@ def enter_evaluation(conn):
                 label_degree_level = tk.Label(change_eval_window, text='Degree Level')
                 label_degree_level.grid(row=3, column=0)
 
-                label_goal_type = tk.Label(change_eval_window, text='Goal Type')
-                label_goal_type.grid(row=4, column=0)
+                # label_goal_type = tk.Label(change_eval_window, text='Goal Type')
+                # label_goal_type.grid(row=4, column=0)
 
                 label_suggestions = tk.Label(change_eval_window, text='Suggestions')
                 label_suggestions.grid(row=5, column=0)
@@ -985,8 +986,8 @@ def enter_evaluation(conn):
                 degree_level_entry = tk.Entry(change_eval_window)
                 degree_level_entry.grid(row=3, column=1)
 
-                goal_type_entry = tk.Entry(change_eval_window)
-                goal_type_entry.grid(row=4, column=1)
+                # goal_type_entry = tk.Entry(change_eval_window)
+                # goal_type_entry.grid(row=4, column=1)
 
                 suggestions_entry = tk.Entry(change_eval_window)
                 suggestions_entry.grid(row=5, column=1)
@@ -1015,7 +1016,7 @@ def enter_evaluation(conn):
                         year = year_entry.get()
                         degree_name = degree_name_entry.get()
                         degree_level = degree_level_entry.get()
-                        goal_type = goal_type_entry.get()
+                        #goal_type = goal_type_entry.get()
                         suggestions = suggestions_entry.get() if suggestions_entry.get().strip() else None
                         suggestions_complete = suggestions_complete_entry.get()
 
@@ -1034,7 +1035,7 @@ def enter_evaluation(conn):
 
                         cursor = conn.cursor()
 
-                        if  goal_type or suggestions or suggestions_complete or numA or numB or numC or numF:
+                        if suggestions or suggestions_complete or numA or numB or numC or numF:
                             try: 
                                 eval_insert_query = """
                                     INSERT INTO evaluation (section_num, year, semester, course_num, goal_num, degree_name, degree_level, goal_type, suggestions, suggestions_complete, numA, numB, numC, numF) 
@@ -1048,7 +1049,7 @@ def enter_evaluation(conn):
                                     numC = VALUES(numC),
                                     numF = VALUES(numF)
                                 """
-                                cursor.execute(eval_insert_query, (section_num, year, semester, course_num, goal_num, degree_name, degree_level, goal_type, suggestions, suggestions_complete, numA, numB, numC, numF))
+                                cursor.execute(eval_insert_query, (section_num, year, semester, course_num, goal_num, degree_name, degree_level, eval[3], suggestions, suggestions_complete, numA, numB, numC, numF))
                                 conn.commit()
                                 print("Evaluation added successfully!")
                                 change_eval_window.destroy()
@@ -1082,8 +1083,8 @@ def enter_evaluation(conn):
             label_degree_level = tk.Label(change_eval_window, text='Degree Level')
             label_degree_level.grid(row=3, column=0)
 
-            label_goal_type = tk.Label(change_eval_window, text='Goal Type')
-            label_goal_type.grid(row=4, column=0)
+            # label_goal_type = tk.Label(change_eval_window, text='Goal Type')
+            # label_goal_type.grid(row=4, column=0)
 
             label_suggestions = tk.Label(change_eval_window, text='Suggestions')
             label_suggestions.grid(row=5, column=0)
@@ -1120,10 +1121,10 @@ def enter_evaluation(conn):
             degree_level_entry = tk.Entry(change_eval_window, textvariable=degree_level_var)
             degree_level_entry.grid(row=3, column=1)
 
-            goal_type_var = tk.StringVar()
-            goal_type_var.set(current_eval[4])
-            goal_type_entry = tk.Entry(change_eval_window, textvariable=goal_type_var)
-            goal_type_entry.grid(row=4, column=1)
+            # goal_type_var = tk.StringVar()
+            # goal_type_var.set(current_eval[4])
+            # goal_type_entry = tk.Entry(change_eval_window, textvariable=goal_type_var)
+            # goal_type_entry.grid(row=4, column=1)
 
             suggestions_var = tk.StringVar()
             suggestions_var.set(current_eval[5])
@@ -1156,7 +1157,7 @@ def enter_evaluation(conn):
                 goal_num = goal_num_entry.get()
                 degree_name = degree_name_entry.get()
                 degree_level = degree_level_entry.get()
-                goal_type = goal_type_entry.get()
+                goal_type = eval[3]
                 suggestions = suggestions_entry.get()
                 numA = numA_entry.get()
                 numB = numB_entry.get()
@@ -1165,7 +1166,7 @@ def enter_evaluation(conn):
 
                 cursor = conn.cursor()
 
-                if goal_num or degree_name or degree_level or goal_type or suggestions or numA or numB or numC or numF:
+                if goal_num or degree_name or degree_level or suggestions or numA or numB or numC or numF:
                     try: 
                         eval_update_query = """
                             UPDATE evaluation
@@ -1186,10 +1187,11 @@ def enter_evaluation(conn):
 
             degree_query = '''
                 SELECT degree_name, degree_level
-                FROM degree
+                FROM degree_courses
+                WHERE course_num = %s
             '''
             cursor = conn.cursor()
-            cursor.execute(degree_query)
+            cursor.execute(degree_query, (course_num,))
             degrees = cursor.fetchall()
 
             degrees_var = tk.StringVar()  # Variable to hold selected section
@@ -1755,7 +1757,7 @@ def query_incomplete_evaluations(conn):
             results3 = cursor.fetchall()
 
             query3 = """
-                SELECT course_num, section_num, suggestions, suggestions_complete
+                SELECT course_num, section_num, suggestions, suggestions_complete, goal_num, degree_name, degree_level
                 FROM evaluation
                 WHERE semester = %s AND year = %s
     
@@ -1770,11 +1772,11 @@ def query_incomplete_evaluations(conn):
             tk.Label(result_window, text="Suggestion Paragraph Progress for Sections with Evaluations:").pack()
             for result in results2:
                 if result[3]:
-                    tk.Label(result_window, text=f"Course {result[0]}, Section: {result[1]} is complete.").pack()
+                    tk.Label(result_window, text=f"Course {result[0]}, Section: {result[1]} for {result[5]}, {result[6]}: goal {result[4]} is complete.").pack()
                 elif not result[3] and len(result[2]) > 0:
-                    tk.Label(result_window, text=f"Course {result[0]}, Section: {result[1]} is partially complete.").pack()
+                    tk.Label(result_window, text=f"Course {result[0]}, Section: {result[1]} for {result[5]}, {result[6]}: goal {result[4]} is partially complete.").pack()
                 elif not result[3] and len(result[2]) == 0:
-                    tk.Label(result_window, text=f"Course {result[0]}, Section: {result[1]} is not complete, no information added.").pack()
+                    tk.Label(result_window, text=f"Course {result[0]}, Section: {result[1]} for {result[5]}, {result[6]}: goal {result[4]} is not complete, no information added.").pack()
 
         except Exception as e:
             tk.Label(eval_window, text=f"{e}:Request could not be completed. Please make sure all values were entered correctly. ").pack()
