@@ -55,7 +55,7 @@ def connect_to_database():
 def create_tables(conn):
     cursor = conn.cursor()
     drop_tables = """
-    DROP TABLE IF EXISTS evaluation, section, degree_courses, goal, degree, instructor, course;
+    DROP TABLE IF EXISTS evaluation, section, degree_courses, goal, degree, instructor, course, goal_courses;
 """
     cursor.execute(drop_tables)
     
@@ -113,8 +113,10 @@ def create_tables(conn):
                 degree_level VARCHAR(200),
                 course_num VARCHAR(10),
                 PRIMARY KEY(course_num, degree_name, degree_level),
+                UNIQUE (course_num, degree_name, degree_level),
                 FOREIGN KEY (course_num) REFERENCES course(course_num) ON DELETE CASCADE,
                 FOREIGN KEY (degree_name, degree_level) REFERENCES degree(degree_name, degree_level) ON DELETE CASCADE
+                
             );
             """
     cursor.execute(create_degree_courses)
@@ -165,6 +167,20 @@ def create_tables(conn):
             """
     
     cursor.execute(create_evaluation)
+
+
+    create_goal_courses = """
+            CREATE TABLE IF NOT EXISTS goal_courses (
+                goal_num CHAR(4),
+                degree_name VARCHAR(200),
+                degree_level VARCHAR(200),
+                course_num VARCHAR(10),
+                PRIMARY KEY(goal_num, degree_name, degree_level, course_num),
+                FOREIGN KEY (course_num, degree_name, degree_level) REFERENCES degree_courses(course_num, degree_name, degree_level) ON DELETE CASCADE,
+                FOREIGN KEY (goal_num, degree_name, degree_level) REFERENCES goal(goal_num, degree_name, degree_level) ON DELETE CASCADE
+            );
+            """
+    cursor.execute(create_goal_courses)
 
 
     print("Tables created successfully!")
@@ -394,7 +410,7 @@ def enter_course(data_entry_window, conn):
                 try:
                     # Insert the course-degree association into the degree_course table
                     insert_course_degree_query = """
-                    INSERT INTO degree_course (degree_name, degree_level, course_num)
+                    INSERT INTO degree_courses (degree_name, degree_level, course_num)
                     VALUES (%s, %s, %s)
                     """
                     cursor.execute(insert_course_degree_query, (degree_name, degree_level, course_num))
@@ -570,7 +586,6 @@ def associate_degree_and_course(data_entry_window, conn):
             except mysql.connector.Error as e:
                 print(f"Error connecting {course_id} : {e}")
 
-
 def enter_goals(data_entry_window, conn):
     goals_window = tk.Toplevel()
     goals_window.title("Enter Goals")
@@ -618,6 +633,33 @@ def enter_goals(data_entry_window, conn):
                 goals_window.destroy()
             except mysql.connector.Error as e:
                 print(f"Error: {e}")
+            
+            try:
+                course_num_query = ''' 
+                SELECT course_num
+                FROM degree_courses
+                WHERE degree_name = %s AND degree_level = %s
+                '''
+
+                cursor.execute(course_num_query, (degree_name, degree_level))
+                course_nums = cursor.fetchall()
+
+                goals_courses_insert_query = """
+                    INSERT INTO goal_courses (goal_num, degree_name, degree_level, course_num)
+                    VALUES (%s, %s, %s, %s)
+"""         
+                for course_num in course_nums:
+                    cursor.execute(goals_courses_insert_query, (goal_num, degree_name, degree_level, course_num[0]))
+
+                conn.commit()
+                print("Goal and associated courses added successfully!")
+                goals_window.destroy()
+
+
+            except mysql.connector.Error as e:
+                print(f"Error: {e}")
+
+
         else:
             print("Please fill in all fields.")
 
