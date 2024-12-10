@@ -11,6 +11,12 @@ from tkinter import messagebox
 #you can have same goal code for different degrees
 #one evaluation per goal per section
 
+def is_valid_semester(value):
+    value = value.lower()
+    return value == "fall" or value == "spring" or value == "summer"
+
+def is_valid_year(value):
+    return len(value) == 4 and value >= 1600
 
 def load_config(filename="db_config.json"):
     try:
@@ -25,7 +31,6 @@ def load_config(filename="db_config.json"):
     except json.JSONDecodeError:
         print("Error: Configuration file is not a valid JSON format.")
         return None
-
 
 def connect_to_database():
 # Load database configuration
@@ -49,10 +54,6 @@ def connect_to_database():
         return None
 
     print('Connected to database')
-
-
-
-
 
 def create_tables(conn):
     cursor = conn.cursor()
@@ -398,8 +399,6 @@ def enter_degree(data_entry_window, conn):
         # submit_button = tk.Button(degree_window, text="Submit", command=lambda: submit_degree(cursor))
         # submit_button.grid(row=2, column=1, pady=10)
 
-
-
 def enter_course(data_entry_window, conn):
     course_window = tk.Toplevel()
     course_window.title("Enter Course")
@@ -503,7 +502,6 @@ def enter_course(data_entry_window, conn):
 
             
         tk.Button(association_window, text="Associate", command=add_association).grid(row=2, column=0, pady=10)
-    
 
 def enter_instructor(data_entry_window, conn):
     instructor_window = tk.Toplevel()
@@ -620,7 +618,6 @@ def enter_section(data_entry_window, conn):
                 print(f"Error: {e}\nPlease ensure that both course number and instructor id have already been added to the table!")
         else:
             print("Please fill in all fields.")
-
 
 def associate_degree_and_course(data_entry_window, conn):
     deg_course_window = tk.Toplevel()
@@ -768,8 +765,6 @@ def enter_goals(data_entry_window, conn):
             
         else:
             print("Please fill in all fields.")
-
-
 
 def enter_evaluation(data_entry_window, conn):
     evaluation_window = tk.Toplevel()
@@ -1068,7 +1063,6 @@ def query_courses_by_degree(conn):
 
     tk.Button(degree_window, text="Submit", command=execute_query).grid(row=2, column=1)
 
-
 def query_sections_by_degree(conn):
     window = tk.Toplevel()
     window.title("Sections by Degree")
@@ -1268,7 +1262,7 @@ def query_sections_by_semesters(conn):
             # Construct the query
             query = """
                 SELECT section_num, course_num, year, semester,
-                       CASE semester.lower()
+                       CASE semester
                            WHEN 'spring' THEN 1
                            WHEN 'summer' THEN 2
                            WHEN 'fall' THEN 3
@@ -1287,11 +1281,11 @@ def query_sections_by_semesters(conn):
             end_results = []
             for result in results:
                 sem_num = semester_order[result[3].lower()]
-                if (result[2] == start_yr):
+                if result[2] == start_yr:
                     if sem_num >= start_sem_num:
                         end_results.append(result)
 
-                elif (result[2] == end_yr):
+                elif result[2] == end_yr:
                     if sem_num <= end_sem_num:
                         end_results.append(result)
                 else:
@@ -1368,7 +1362,11 @@ def query_sections_by_instructor(conn):
                 ORDER BY year, semester_order;
             """
             cursor = conn.cursor()
-            cursor.execute(query, (instructor_id, start_semester, end_semester, start_year, end_year))
+            cursor.execute(query, (
+                instructor_id,
+                start_year, start_year, start_semester_num,
+                end_year, end_year, end_semester_num
+            ))
             sections = cursor.fetchall()
 
             end_results = []
@@ -1404,23 +1402,28 @@ def query_incomplete_evaluations(conn):
     eval_window = tk.Toplevel()
     eval_window.title("Incomplete Evaluations")
 
-    tk.Label(eval_window, text="Semester (e.g., Spring 2024)").grid(row=0, column=0)
+    tk.Label(eval_window, text="Semester").grid(row=0, column=0)
+    tk.Label(eval_window, text="Year").grid(row=1, column=0)
     semester_entry = tk.Entry(eval_window)
     semester_entry.grid(row=0, column=1)
+    year_entry = tk.Entry(eval_window)
+    year_entry.grid(row=1, column=1)
 
     def execute_query():
         semester = semester_entry.get()
-        if not semester:
-            print("Semester is required!")
+        year = year_entry.get()
+
+        if not semester and year:
+            print("All fields are required!")
             return
 
         cursor = conn.cursor()
         query = """
             SELECT course_num, section_num, suggestions
             FROM evaluation
-            WHERE semester = %s AND (numA IS NULL OR numB IS NULL OR numC IS NULL OR numF IS NULL)
+            WHERE semester = %s AND year = %s AND (numA IS NULL OR numB IS NULL OR numC IS NULL OR numF IS NULL)
         """
-        cursor.execute(query, (semester,))
+        cursor.execute(query, (semester, year,))
         results = cursor.fetchall()
 
         result_window = tk.Toplevel()
@@ -1448,7 +1451,7 @@ def query_incomplete_evaluations(conn):
             elif not result[3] and len(result[2]) == 0:
                 tk.Label(result_window, text=f"Course {result[0]}, Section: {result[1]} is not complete, no information added.").pack()
 
-    tk.Button(eval_window, text="Submit", command=execute_query).grid(row=1, column=1)
+    tk.Button(eval_window, text="Submit", command=execute_query).grid(row=2, column=1)
 
 #https://www.geeksforgeeks.org/python-gui-tkinter/
 def main_menu(conn):
