@@ -585,41 +585,63 @@ def enter_section(data_entry_window, conn):
     submit_button.grid(row=6, column=1, pady=10)
 
     def submit_section(conn):
-        course_num = course_num_entry.get()
-        section_num = section_num_entry.get()
-        year = year_entry.get()
-        semester = semester_entry.get()
-        num_students = num_students_entry.get()
-        instructor_id = instructor_id_entry.get()
-        cursor = conn.cursor()
+        try:
+            course_num = course_num_entry.get()
+            section_num = section_num_entry.get()
+            year = year_entry.get()
+            year = int(year)
+            semester = semester_entry.get()
+            num_students = num_students_entry.get()
+            instructor_id = instructor_id_entry.get()
+            cursor = conn.cursor()
+        
+            if not section_num.isdigit():
+                print("Error: Section number must be an integer.")
+                tk.Label(section_window, 
+                                text="Error: Section number must be an integer."
+                            ).grid(row=7, column=0)
+                return
 
-        if not section_num.isdigit():
-            print("Error: Section number must be an integer.")
-            return
+            if not len(year) == 4 or year < 1600:
+                print("Error Year must be a 4-digit integer.")
+                tk.Label(section_window, 
+                                text="Error: Year must be a 4 digit integer above 1600."
+                            ).grid(row=7, column=0)
+                return
 
-        if not len(year) == 4:
-            print("Error Year must be a 4-digit integer.")
-            return
+            if not semester.lower() in ['spring', 'summer', 'fall']:
+                print("Error: Semester must be one of 'Spring', 'Summer', or 'Fall'.")
+                tk.Label(section_window, 
+                                text="Error: Semester must be one of Spring, Summer, or Fall."
+                            ).grid(row=7, column=0)
+                return
 
-        if not semester.lower() in ['spring', 'summer', 'fall']:
-            print("Error: Semester must be one of 'Spring', 'Summer', or 'Fall'.")
-            return
+            if not num_students.isdigit():
+                tk.Label(section_window, 
+                                text="Error: Number of Students."
+                            ).grid(row=7, column=0)
+                return
 
-        if not num_students.isdigit():
-            print("Error: Number of students must be an integer.")
-            return
+            if course_num and section_num and year and semester and num_students and instructor_id:
+                try: 
+                    section_insert_query = "INSERT INTO section (course_num, section_num, year, semester, num_students, instructor_id) VALUES (%s, %s, %s, %s, %s, %s)"
+                    cursor.execute(section_insert_query, (course_num, section_num, year, semester, num_students, instructor_id))
+                    conn.commit()
+                    print("Section added successfully!")
+                    section_window.destroy()
+                except mysql.connector.Error as e:
+                    tk.Label(section_window, 
+                                text=f"Error: {e}\nPlease ensure that both course number and instructor id have already been added to the table!"
+                            ).grid(row=7, column=0)
+            else:
+                tk.Label(section_window, 
+                                text="Please fill in all fields"
+                            ).grid(row=7, column=0)
+        except Exception as e:
+                tk.Label(section_window, 
+                                text=f"{e}: Please make sure all values are entered correctly"
+                            ).grid(row=7, column=0)
 
-        if course_num and section_num and year and semester and num_students and instructor_id:
-            try: 
-                section_insert_query = "INSERT INTO section (course_num, section_num, year, semester, num_students, instructor_id) VALUES (%s, %s, %s, %s, %s, %s)"
-                cursor.execute(section_insert_query, (course_num, section_num, year, semester, num_students, instructor_id))
-                conn.commit()
-                print("Section added successfully!")
-                section_window.destroy()
-            except mysql.connector.Error as e:
-                print(f"Error: {e}\nPlease ensure that both course number and instructor id have already been added to the table!")
-        else:
-            print("Please fill in all fields.")
 
 
 def associate_degree_and_course(data_entry_window, conn):
