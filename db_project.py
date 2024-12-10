@@ -138,7 +138,7 @@ def create_tables(conn):
     DROP TABLE IF EXISTS evaluation;
 
 """
-    cursor.execute(drop_eval)
+  #  cursor.execute(drop_eval)
 
     create_evaluation = """
             CREATE TABLE IF NOT EXISTS evaluation (
@@ -783,17 +783,11 @@ def enter_evaluation(data_entry_window, conn):
         label_semester = tk.Label(semester_and_instructor_window, text='Semester')
         label_semester.grid(row=0, column=0)
 
-        label_year = tk.Label(semester_and_instructor_window, text='Year')
-        label_year.grid(row=1, column=0)
-
         label_instructor_id = tk.Label(semester_and_instructor_window, text='Instructor ID')
         label_instructor_id.grid(row=2, column=0)
 
         semester_entry = tk.Entry(semester_and_instructor_window)  # Entry field for semester
         semester_entry.grid(row=0, column=1)
-
-        year_entry = tk.Entry(semester_and_instructor_window)
-        year_entry.grid(row=1, column=1)
 
         instructor_id_entry = tk.Entry(semester_and_instructor_window)  # Entry field for instructor ID
         instructor_id_entry.grid(row=2, column=1)
@@ -809,12 +803,12 @@ def enter_evaluation(data_entry_window, conn):
 
         def get_sections():
             semester = semester_entry.get()
-            year = year_entry.get()
+            #year = year_entry.get()
             instructor_id = instructor_id_entry.get()
             cursor = conn.cursor()
 
-            if instructor_id and year and semester:
-                cursor.execute("SELECT course_num, section_num FROM section WHERE semester = %s AND year = %s AND instructor_id = %s", (semester, year, instructor_id))
+            if instructor_id and semester:
+                cursor.execute("SELECT course_num, section_num FROM section WHERE semester = %s AND instructor_id = %s", (semester, instructor_id))
                 sections = cursor.fetchall()
                 if sections:
                     print(sections)
@@ -872,66 +866,72 @@ def enter_evaluation(data_entry_window, conn):
                 change_eval_window = tk.Toplevel()
                 change_eval_window.title("Change/Add Evaluation Info")
 
+                label_year = tk.Label(change_eval_window, text='Year')
+                label_year.grid(row=0, column=0)
+
                 label_goal_num = tk.Label(change_eval_window, text='Goal Number')
-                label_goal_num.grid(row=0, column=0)
+                label_goal_num.grid(row=1, column=0)
 
                 label_degree_name = tk.Label(change_eval_window, text='Degree Name')
-                label_degree_name.grid(row=1, column=0)
+                label_degree_name.grid(row=2, column=0)
 
                 label_degree_level = tk.Label(change_eval_window, text='Degree Level')
-                label_degree_level.grid(row=2, column=0)
+                label_degree_level.grid(row=3, column=0)
 
                 label_goal_type = tk.Label(change_eval_window, text='Goal Type')
-                label_goal_type.grid(row=3, column=0)
+                label_goal_type.grid(row=4, column=0)
 
                 label_suggestions = tk.Label(change_eval_window, text='Suggestions')
-                label_suggestions.grid(row=4, column=0)
+                label_suggestions.grid(row=5, column=0)
 
                 label_numA = tk.Label(change_eval_window, text='Number of A Grades')
-                label_numA.grid(row=5, column=0)
+                label_numA.grid(row=6, column=0)
 
                 label_numB = tk.Label(change_eval_window, text='Number of B Grades')
-                label_numB.grid(row=6, column=0)
+                label_numB.grid(row=7, column=0)
 
                 label_numC = tk.Label(change_eval_window, text='Number of C Grades')
-                label_numC.grid(row=7, column=0)
+                label_numC.grid(row=8, column=0)
 
                 label_numF = tk.Label(change_eval_window, text='Number of F Grades')
-                label_numF.grid(row=8, column=0)
+                label_numF.grid(row=9, column=0)
+
+                year_entry = tk.Entry(change_eval_window)
+                year_entry.grid(row=0, column=1)
 
                 goal_num_entry = tk.Entry(change_eval_window)
-                goal_num_entry.grid(row=0, column=1)
+                goal_num_entry.grid(row=1, column=1)
 
                 degree_name_entry = tk.Entry(change_eval_window)
-                degree_name_entry.grid(row=1, column=1)
+                degree_name_entry.grid(row=2, column=1)
 
                 degree_level_entry = tk.Entry(change_eval_window)
-                degree_level_entry.grid(row=2, column=1)
+                degree_level_entry.grid(row=3, column=1)
 
                 goal_type_entry = tk.Entry(change_eval_window)
-                goal_type_entry.grid(row=3, column=1)
+                goal_type_entry.grid(row=4, column=1)
 
                 suggestions_entry = tk.Entry(change_eval_window)
-                suggestions_entry.grid(row=4, column=1)
+                suggestions_entry.grid(row=5, column=1)
 
                 numA_entry = tk.Entry(change_eval_window)
-                numA_entry.grid(row=5, column=1)
+                numA_entry.grid(row=6, column=1)
 
                 numB_entry = tk.Entry(change_eval_window)
-                numB_entry.grid(row=6, column=1)
+                numB_entry.grid(row=7, column=1)
 
                 numC_entry = tk.Entry(change_eval_window)
-                numC_entry.grid(row=7, column=1)
+                numC_entry.grid(row=8, column=1)
 
                 numF_entry = tk.Entry(change_eval_window)
-                numF_entry.grid(row=8, column=1)
+                numF_entry.grid(row=9, column=1)
 
                 tk.Button(change_eval_window, text="Submit", command=lambda: submit_eval_info()).grid(row=9, column=1, pady=10)
 
                 def submit_eval_info():
-                    semester_num = semester_entry.get()
-                    year_num = year_entry.get()
                     goal_num = goal_num_entry.get()
+                    semester = semester_entry.get()
+                    year = year_entry.get()
                     degree_name = degree_name_entry.get()
                     degree_level = degree_level_entry.get()
                     goal_type = goal_type_entry.get()
@@ -943,13 +943,13 @@ def enter_evaluation(data_entry_window, conn):
 
                     cursor = conn.cursor()
 
-                    if goal_num or degree_name or degree_level or goal_type or suggestions or numA or numB or numC or numF:
+                    if goal_num or year or degree_name or degree_level or goal_type or suggestions or numA or numB or numC or numF:
                         try: 
                             eval_insert_query = """
                                 INSERT INTO evaluation (section_num, year, semester, course_num, goal_num, degree_name, degree_level, goal_type, suggestions, numA, numB, numC, numF) 
                                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                             """
-                            cursor.execute(eval_insert_query, (section_num, year_num, semester_num, course_num, goal_num, degree_name, degree_level, goal_type, suggestions, numA, numB, numC, numF))
+                            cursor.execute(eval_insert_query, (section_num, year, semester,course_num, goal_num, degree_name, degree_level, goal_type, suggestions, numA, numB, numC, numF))
                             conn.commit()
                             print("Evaluation added successfully!")
                             change_eval_window.destroy()
