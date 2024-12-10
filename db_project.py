@@ -836,10 +836,9 @@ def enter_evaluation(conn):
                 messagebox.showerror("Error", f"{e}\nUnable to complete request. Please make sure values are entered correctly!")
 
         tk.Button(semester_and_instructor_window, text="Submit", command=get_sections).grid(row=4, column=1, pady=10)
-        tk.Button(semester_and_instructor_window, text="View Evaluation Info", command=lambda: view_eval_info(
-            )).grid(row=5, column=1, pady=10)
+        tk.Button(semester_and_instructor_window, text="View Evaluation Info", command=lambda: view_eval_info(semester_entry.get(), year_entry.get())).grid(row=5, column=1, pady=10)
 
-        def view_eval_info(semester=None):
+        def view_eval_info(semester, year):
             try:
                 section = sections_var.get()
                 if not section:
@@ -865,22 +864,14 @@ def enter_evaluation(conn):
                 if eval_info:
                     tk.Label(eval_info_window, text="Evaluation Info:").grid(row=0, column=0)
                     for eval in eval_info:
-                        eval_text = f"YearL {eval[0]}\nGoal Number: {eval[1]}\nDegree Name: {eval[2]}\nDegree Level: {eval[3]}\nGoal Type: {eval[4]}\nSuggestions: {eval[5]}\nNumber of A Grades: {eval[6]}\nNumber of B Grades: {eval[7]}\nNumber of C Grades: {eval[8]}\nNumber of F Grades: {eval[9]}\n"
+                        eval_text = f"Goal Number: {eval[0]}\nDegree Name: {eval[1]}\nDegree Level: {eval[2]}\nGoal Type: {eval[3]}\nSuggestions: {eval[4]}\nSuggestions Complete: {eval[5]}\nNumber of A Grades: {eval[6]}\nNumber of B Grades: {eval[7]}\nNumber of C Grades: {eval[8]}\nNumber of F Grades: {eval[9]}"
                         tk.Label(eval_info_window, text=eval_text).grid(row=eval_info.index(eval) + 1, column=0)
                         tk.Button(eval_info_window, text="Change Evaluation Info", command=lambda: change_eval_info(eval_info_window, conn, eval_info)).grid(row=len(eval_info) + 2, column=0, pady=10)
-                        tk.Button(eval_info_window, text="Duplicate Evaluation onto other Degrees", command=lambda: dupe_eval_info(eval_info_window, conn, eval_info, section_num, course_num, semester)).grid(row=len(eval_info) + 3, column=0, pady=10)
+                        tk.Button(eval_info_window, text="Duplicate Evaluation onto other Degrees", command=lambda: dupe_eval_info(eval_info_window, conn, eval_info, section_num, course_num, semester, year)).grid(row=len(eval_info) + 3, column=0, pady=10)
 
                 else:
                     tk.Label(eval_info_window, text="No evaluation info found for this section.").grid(row=0, column=0)
                     tk.Button(eval_info_window, text="Add Evaluation Info", command=lambda: add_eval_info(eval_info_window, conn)).grid(row=1, column=0, pady=10)
-                    #is_eval_info = False
-
-
-            # if is_eval_info:
-            #     tk.Button(eval_info_window, text="Change Evaluation Info", command=lambda: change_eval_info(eval_info_window, conn)).grid(row=len(eval_info) + 1, column=0, pady=10)
-            #     tk.Button(eval_info_window, text="Duplicate Evaluation onto other Degrees", command=lambda: dupe_eval_info(eval_info_window, conn)).grid(row=len(eval_info) + 2, column=0, pady=10)
-            # else:
-            #     tk.Button(eval_info_window, text="Add Evaluation Info", command=lambda: add_eval_info(eval_info_window, conn)).grid(row=len(eval_info) + 1, column=0, pady=10)
             
                 tk.Button(eval_info_window, text="Make no changes", command=eval_info_window.destroy).grid(row=len(eval_info) + 4, column=0, pady=10)
             
@@ -889,7 +880,7 @@ def enter_evaluation(conn):
 
 
             def add_eval_info(eval_info_window, conn):
-                #eval_info_window.destroy()
+                eval_info_window.destroy()
                 change_eval_window = tk.Toplevel()
                 change_eval_window.title("Add Evaluation Info")
 
@@ -1016,7 +1007,7 @@ def enter_evaluation(conn):
 
             current_eval = eval_info[0]
 
-            #eval_info_window.destroy()
+            eval_info_window.destroy()
             change_eval_window = tk.Toplevel()
             change_eval_window.title("Change Evaluation Info")
 
@@ -1131,7 +1122,7 @@ def enter_evaluation(conn):
                 else:
                     messagebox.showinfo("Incomplete", "Please fill in at least one field")
         
-        def dupe_eval_info(eval_info_window, conn, eval_info, section_num, course_num, semester):
+        def dupe_eval_info(eval_info_window, conn, eval_info, section_num, course_num, semester, year):
             current_eval = eval_info[0]
 
             degree_query = '''
@@ -1203,11 +1194,11 @@ def enter_evaluation(conn):
                 print(section_num)
                 try:
                     eval_insert_query = """
-                        INSERT INTO evaluation (section_num, year, semester, course_num, goal_num, degree_name, degree_level, goal_type, suggestions, numA, numB, numC, numF) 
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        INSERT INTO evaluation (section_num, year, semester, course_num, goal_num, degree_name, degree_level, goal_type, suggestions, suggestions_complete, numA, numB, numC, numF) 
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """
 
-                    cursor.execute(eval_insert_query, (section_num, current_eval[0], semester, course_num, selected_goal, degree_name, degree_level, current_eval[4], current_eval[5], current_eval[6], current_eval[7], current_eval[8], current_eval[9]))
+                    cursor.execute(eval_insert_query, (section_num, year, semester, course_num, selected_goal, degree_name, degree_level, current_eval[3], current_eval[4], current_eval[5], current_eval[6], current_eval[7], current_eval[8], current_eval[9]))
                     conn.commit()
                     messagebox.showinfo("Success", "Evaluation duplicated!")
                     eval_info_window.destroy()
