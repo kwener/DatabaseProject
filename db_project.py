@@ -276,17 +276,41 @@ def enter_degree(data_entry_window, conn):
                 course_num = courses[index][0]
                 try:
                     insert_course_deg = """
-                    INSERT INTO degree_course (degree_name, degree_level, course_num)
+                    INSERT INTO degree_courses (degree_name, degree_level, course_num)
                     VALUES (%s, %s, %s)
                     """
 
-                    cursor.execute(insert_course_deg, (degree_name, degree_level, course_num))
+                    cursor.execute(insert_course_deg, (degree_name, degree_level, course_num))   
                     
                 except mysql.connector.Error as e:
                     print(f"Error adding course {course_num}: {e}")
+                conn.commit()
+                print("Course(s) associated with degree successfully!")
 
-            conn.commit()
-            print("Courses associated successfully!")
+                try:
+                    get_goal_query = """
+                        SELECT goal_num
+                        FROM goal
+                        WHERE degree_name = %s and degree_level = %s
+                    """
+                    cursor.execute(get_goal_query, (degree_name, degree_level))
+                    goal_nums = cursor.fetchall() 
+
+                    goal_courses_query= """
+                        INSERT INTO goal_courses (goal_num, degree_name, degree_level, course_num)
+                        VALUES (%s, %s, %s, %s)
+                        """
+                    
+                    for goal_num in goal_nums:
+                        cursor.execute(goal_courses_query, (goal_num, degree_name, degree_level, course_num))      
+
+                    conn.commit()
+                    print("New course associated with all degree goals successfully!")
+
+                except mysql.connector.Error as e:
+                    print(f"Error: {e}")
+
+
             course_window.destroy()
 
         tk.Button(course_window, text="Add Selected Courses", command=add_selected_courses).grid(row=2, column=0)
@@ -339,7 +363,33 @@ def enter_degree(data_entry_window, conn):
             else:
                 print("Please provide both course number and course name.")
 
+
+            try:
+                get_goal_query = """
+                    SELECT goal_num
+                    FROM goal
+                    WHERE degree_name = %s and degree_level = %s
+                """
+                cursor.execute(get_goal_query, (degree_name, degree_level))
+                goal_nums = cursor.fetchall() 
+
+                goal_courses_query= """
+                    INSERT INTO goal_courses (goal_num, degree_name, degree_level, course_num)
+                    VALUES (%s, %s, %s, %s)
+                    """
+                
+                for goal_num in goal_nums:
+                    cursor.execute(goal_courses_query, (goal_num, degree_name, degree_level, new_course_num))      
+
+                conn.commit()
+                print("New course associated with all degree goals successfully!")
+
+            except mysql.connector.Error as e:
+                print(f"Error: {e}")
+
+
         tk.Button(new_course_window, text="Add New Course", command=add_new_course).grid(row=3, column=0, pady=10)       
+
 
 
         # submit_button = tk.Button(degree_window, text="Submit", command=lambda: submit_degree(cursor))
@@ -403,6 +453,7 @@ def enter_course(data_entry_window, conn):
         def add_association():
             selected_index = degree_listbox.curselection()
             if selected_index:
+                
                 degree_name, degree_level = degrees[selected_index[0]]
                 try:
                     # Insert the course-degree association into the degree_course table
@@ -413,12 +464,41 @@ def enter_course(data_entry_window, conn):
                     cursor.execute(insert_course_degree_query, (degree_name, degree_level, course_num))
                     conn.commit()
                     print(f"Course {course_num} associated with {degree_name} successfully!")
+
+                    try:
+                        get_goal_query = """
+                            SELECT goal_num
+                            FROM goal
+                            WHERE degree_name = %s and degree_level = %s
+                        """
+
+                        cursor.execute(get_goal_query, (degree_name, degree_level))
+                        goal_nums = cursor.fetchall() 
+                        print(goal_nums)
+                        
+                        goal_courses_query= """
+                            INSERT INTO goal_courses (goal_num, degree_name, degree_level, course_num)
+                            VALUES (%s, %s, %s, %s)
+                            """
+                        
+                        for goal_num in goal_nums:
+                            cursor.execute(goal_courses_query, (goal_num[0], degree_name, degree_level, course_num))      
+
+                        conn.commit()
+                        print("New course associated with all degree goals successfully!")
+
+                    except mysql.connector.Error as e:
+                        print(f"Error: {e}")
+
+
                     association_window.destroy()  # Close the association window
                 except mysql.connector.Error as e:
                     print(f"Error associating course {course_num} with degree: {e}")
             else:
                 print("Please select a degree to associate with the course.")
 
+
+            
         tk.Button(association_window, text="Associate", command=add_association).grid(row=2, column=0, pady=10)
     
 
@@ -574,14 +654,40 @@ def associate_degree_and_course(data_entry_window, conn):
         if course_id and degree_name and degree_level:
             try:
                 insert_course_deg = """
-                INSERT INTO degree_course (degree_name, degree_level, course_num)
+                INSERT INTO degree_courses (degree_name, degree_level, course_num)
                 VALUES (%s, %s, %s)
                 """
 
                 cursor.execute(insert_course_deg, (degree_name, degree_level, course_id))
-                
+                print('Association between course and degree made successfully!')
+
+                try:
+                    goal_query = ''' 
+                    SELECT goal_num
+                    FROM goal
+                    WHERE degree_name = %s AND degree_level = %s
+                    '''
+
+                    cursor.execute(goal_query, (degree_name, degree_level))
+                    goal_nums = cursor.fetchall()
+
+                    goals_courses_insert_query = """
+                        INSERT INTO goal_courses (goal_num, degree_name, degree_level, course_num)
+                        VALUES (%s, %s, %s, %s)
+                    """         
+                    for goal_num in goal_nums:
+                        cursor.execute(goals_courses_insert_query, (goal_num[0], degree_name, degree_level, course_id))
+
+                    conn.commit()
+                    print("Goal and all courses for the degree associated successfully!")
+                    deg_course_window.destroy()
+
+                except mysql.connector.Error as e:
+                    print(f"Error: {e}")
+
             except mysql.connector.Error as e:
                 print(f"Error connecting {course_id} : {e}")
+                tk.Label(deg_course_window, text="Unable to associate the given course and degree, please try again").grid(row=4, column=1, pady=10)
 
 def enter_goals(data_entry_window, conn):
     goals_window = tk.Toplevel()
@@ -628,35 +734,35 @@ def enter_goals(data_entry_window, conn):
                 conn.commit()
                 print("Goal added successfully!")
                 goals_window.destroy()
+            
+                try:
+                    course_num_query = ''' 
+                    SELECT course_num
+                    FROM degree_courses
+                    WHERE degree_name = %s AND degree_level = %s
+                    '''
+
+                    cursor.execute(course_num_query, (degree_name, degree_level))
+                    course_nums = cursor.fetchall()
+
+                    goals_courses_insert_query = """
+                        INSERT INTO goal_courses (goal_num, degree_name, degree_level, course_num)
+                        VALUES (%s, %s, %s, %s)
+                 """         
+                    for course_num in course_nums:
+                        cursor.execute(goals_courses_insert_query, (goal_num, degree_name, degree_level, course_num[0]))
+
+                    conn.commit()
+                    print("Goal and all courses for the degree associated successfully!")
+                    goals_window.destroy()
+
+
+                except mysql.connector.Error as e:
+                    print(f"Error: {e}")
+
             except mysql.connector.Error as e:
                 print(f"Error: {e}")
             
-            try:
-                course_num_query = ''' 
-                SELECT course_num
-                FROM degree_courses
-                WHERE degree_name = %s AND degree_level = %s
-                '''
-
-                cursor.execute(course_num_query, (degree_name, degree_level))
-                course_nums = cursor.fetchall()
-
-                goals_courses_insert_query = """
-                    INSERT INTO goal_courses (goal_num, degree_name, degree_level, course_num)
-                    VALUES (%s, %s, %s, %s)
-"""         
-                for course_num in course_nums:
-                    cursor.execute(goals_courses_insert_query, (goal_num, degree_name, degree_level, course_num[0]))
-
-                conn.commit()
-                print("Goal and associated courses added successfully!")
-                goals_window.destroy()
-
-
-            except mysql.connector.Error as e:
-                print(f"Error: {e}")
-
-
         else:
             print("Please fill in all fields.")
 
@@ -929,7 +1035,6 @@ def query_courses_by_degree(conn):
         """
         cursor.execute(query, (degree_name, degree_level))
         courses = cursor.fetchall()
-
         result_window = tk.Toplevel()
         result_window.title("Courses Result")
         if courses:
@@ -951,6 +1056,7 @@ def query_courses_by_degree(conn):
             tk.Label(result_window, text="No courses found for the specified degree.").pack()
 
     tk.Button(degree_window, text="Submit", command=execute_query).grid(row=2, column=1)
+
 
 def query_sections_by_degree(conn):
     window = tk.Toplevel()
@@ -1098,7 +1204,7 @@ def query_courses_by_goals(conn):
             if courses:
                 tk.Label(result_window, text="Courses Associated with the Degree:").grid(row=0, column=0)
                 for idx, course in enumerate(courses, start=1):
-                    tk.Label(result_window, text=courses[0]).grid(row=idx, column=0)
+                    tk.Label(result_window, text=course[0]).grid(row=idx, column=0)
             else:
                 tk.Label(result_window, text="No courses found for the specified degree.").grid(row=0, column=0)
 
