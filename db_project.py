@@ -3,6 +3,8 @@ from mysql.connector import Error
 import json
 import tkinter as tk
 from tkinter import ttk
+from tkinter import messagebox
+# TODO change errors to messageboxes
 
 # Establish connection to MySQL database
 
@@ -1262,12 +1264,11 @@ def query_sections_by_semesters(conn):
             end_yr = int(end_yr)
             start_sem_num = semester_order[start_sem.lower()]
             end_sem_num = semester_order[end_sem.lower()]
-        
 
             # Construct the query
             query = """
                 SELECT section_num, course_num, year, semester,
-                       CASE semester
+                       CASE semester.lower()
                            WHEN 'spring' THEN 1
                            WHEN 'summer' THEN 2
                            WHEN 'fall' THEN 3
@@ -1314,8 +1315,10 @@ def query_sections_by_instructor(conn):
     instructor_window.title("Sections by Instructor")
 
     tk.Label(instructor_window, text="Instructor ID").grid(row=0, column=0)
-    tk.Label(instructor_window, text="Start Semester (e.g., 2022)").grid(row=1, column=0)
-    tk.Label(instructor_window, text="End Semester (e.g., 2024)").grid(row=2, column=0)
+    tk.Label(instructor_window, text="Start Semester").grid(row=1, column=0)
+    tk.Label(instructor_window, text="End Semester").grid(row=2, column=0)
+    tk.Label(instructor_window, text="Start Year").grid(row=3, column=0)
+    tk.Label(instructor_window, text="End Year").grid(row=4, column=0)
 
     instructor_id_entry = tk.Entry(instructor_window)
     instructor_id_entry.grid(row=0, column=1)
@@ -1323,38 +1326,79 @@ def query_sections_by_instructor(conn):
     start_semester_entry.grid(row=1, column=1)
     end_semester_entry = tk.Entry(instructor_window)
     end_semester_entry.grid(row=2, column=1)
+    start_year_entry = tk.Entry(instructor_window)
+    start_year_entry.grid(row=3, column=1)
+    end_year_entry = tk.Entry(instructor_window)
+    end_year_entry.grid(row=4, column=1)
 
     def execute_query():
         instructor_id = instructor_id_entry.get()
         start_semester = start_semester_entry.get()
         end_semester = end_semester_entry.get()
+        start_year = start_year_entry.get()
+        end_year = end_year_entry.get()
 
-        if not instructor_id or not start_semester or not end_semester:
-            print("All fields are required!")
-            print("All fields are required!")
+        if not instructor_id and start_semester and end_semester and start_year and end_year:
+            tk.Label(instructor_window, text="All fields are required!").grid(row=5, column=0, columnspan=2)
             return
 
-        cursor = conn.cursor()
-        query = """
-            SELECT course_num, section_num, year, semester
-            FROM section
-            WHERE instructor_id = %s AND semester BETWEEN %s AND %s
-            ORDER BY year, semester
-        """
-        cursor.execute(query, (instructor_id, start_semester, end_semester))
-        sections = cursor.fetchall()
+        semester_order = {"spring": 1, "summer": 2, "fall": 3}
 
-        result_window = tk.Toplevel()
-        result_window.title("Sections Result")
-        if sections:
-            tk.Label(result_window, text="Sections Taught by the Instructor:").pack()
+        try:
+            start_year = int(start_year)
+            end_year = int(end_year)
+            start_semester_num = semester_order[start_semester.lower()]
+            end_semester_num = semester_order[end_semester.lower()]
+
+            query = """
+                WITH section_with_order AS (
+                    SELECT course_num, section_num, year, semester,
+                           CASE semester
+                               WHEN 'spring' THEN 1
+                               WHEN 'summer' THEN 2
+                               WHEN 'fall' THEN 3
+                           END AS semester_order
+                    FROM section
+                    WHERE instructor_id = %s
+                )
+                SELECT course_num, section_num, year, semester
+                FROM section_with_order
+                WHERE (year > %s OR (year = %s AND semester_order >= %s))
+                    AND (year < %s OR (year = %s AND semester_order <= %s))
+                ORDER BY year, semester_order;
+            """
+            cursor = conn.cursor()
+            cursor.execute(query, (instructor_id, start_semester, end_semester, start_year, end_year))
+            sections = cursor.fetchall()
+
+            end_results = []
             for section in sections:
-                section_info = f"Course: {section[0]}, Section: {section[1]}, Year: {section[2]}, Semester: {section[3]}"
-                tk.Label(result_window, text=section_info).pack()
-        else:
-            tk.Label(result_window, text="No sections found for the specified criteria.").pack()
+                semester_num = semester_order[section[3].lower()]
+                if section[2] == start_year:
+                    if semester_num >= start_semester_num:
+                        end_results.append(section)
 
-    tk.Button(instructor_window, text="Submit", command=execute_query).grid(row=3, column=1)
+                elif section[2] == end_year:
+                    if semester_num <= end_semester_num:
+                        end_results.append(section)
+
+                else:
+                    end_results.append(section)
+
+            result_window = tk.Toplevel()
+            result_window.title("Sections Result")
+            if end_results:
+                tk.Label(result_window, text="Sections Taught by the Instructor:").pack()
+                for section in end_results:
+                    section_info = f"Course: {section[0]}, Section: {section[1]}, Year: {section[2]}, Semester: {section[3]}"
+                    tk.Label(result_window, text=section_info).pack()
+            else:
+                tk.Label(result_window, text="No sections found for the specified criteria.").pack()
+
+        except Exception as e:
+            tk.Label(instructor_window, text=f"Error: {e}").grid(row=5, column=0, columnspan=2)
+
+    tk.Button(instructor_window, text="Submit", command=execute_query).grid(row=6, column=1)
 
 def query_incomplete_evaluations(conn):
     eval_window = tk.Toplevel()
