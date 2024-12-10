@@ -30,6 +30,28 @@ def load_config(filename="db_config.json"):
     except json.JSONDecodeError:
         messagebox.showerror("Error", "Configuration file is not a valid JSON format.")
         return None
+    
+
+def drop_all_tables(cursor):
+    # Drop tables in reverse dependency order
+    tables_to_drop = [
+        "goal_courses",
+        "evaluation",
+        "goal",
+        "degree_courses",
+        "section",
+        "degree",
+        "instructor",
+        "course",
+    ]
+    for table in tables_to_drop:
+        try:
+            drop_query = f"DROP TABLE IF EXISTS {table};"
+            cursor.execute(drop_query)
+        except mysql.connector.Error as e:
+            print(f"Error dropping table {table}: {e}")
+    print("All tables dropped successfully!")
+
 
 def connect_to_database():
 # Load database configuration
@@ -57,6 +79,7 @@ def connect_to_database():
 def create_tables(conn):
     cursor = conn.cursor()
 
+    #drop_all_tables(cursor)
     
     #not sure if i need not null for name 
     create_course= """
@@ -106,11 +129,15 @@ def create_tables(conn):
             """
     cursor.execute(create_degree)
 
+
+
+
     create_degree_courses = """
             CREATE TABLE IF NOT EXISTS degree_courses (
                 degree_name VARCHAR(200),
                 degree_level VARCHAR(200),
                 course_num VARCHAR(10),
+                is_core INT(1) DEFAULT 0,
                 PRIMARY KEY(course_num, degree_name, degree_level),
                 UNIQUE (course_num, degree_name, degree_level),
                 FOREIGN KEY (course_num) REFERENCES course(course_num) ON DELETE CASCADE,
@@ -175,7 +202,7 @@ def create_tables(conn):
             );
             """
     cursor.execute(create_goal_courses)
-
+    conn.commit()
 
     print("Tables created successfully!")
 
@@ -263,23 +290,29 @@ def enter_degree(conn):
         cursor.execute ("SELECT course_num, name FROM course")
         courses = cursor.fetchall()
 
+        is_core_var = tk.IntVar()  # Variable to track the checkbox state (1 for core, 0 otherwise)
+        is_core_checkbox = tk.Checkbutton(course_window, text="Mark as Core Class", variable=is_core_var)
+        is_core_checkbox.grid(row=2, column=0)
+
         course_listbox = tk.Listbox(course_window, selectmode = tk.MULTIPLE, width = 50)
         for course in courses:
             course_listbox.insert(tk.END, f"{course[0]} :{course[1]}")
             
         course_listbox.grid(row = 1, column = 0, pady = 10)
 
+
         def add_selected_courses():
             selected_indices = course_listbox.curselection()
+            is_core = is_core_var.get()
             for index in selected_indices:
                 course_num = courses[index][0]
                 try:
                     insert_course_deg = """
-                    INSERT INTO degree_courses (degree_name, degree_level, course_num)
-                    VALUES (%s, %s, %s)
+                    INSERT INTO degree_courses (degree_name, degree_level, course_num, is_core)
+                    VALUES (%s, %s, %s, %s)
                     """
 
-                    cursor.execute(insert_course_deg, (degree_name, degree_level, course_num))   
+                    cursor.execute(insert_course_deg, (degree_name, degree_level, course_num, is_core))   
                     
                 except mysql.connector.Error as e:
                     messagebox.showerror("Error", f"Unable to add course {course_num}: {e}")
@@ -330,9 +363,14 @@ def enter_degree(conn):
         new_course_name_entry = tk.Entry(new_course_window)
         new_course_name_entry.grid(row=2, column=1)
 
+        is_core_var = tk.IntVar()
+        is_core_checkbox = tk.Checkbutton(new_course_window, text="Mark as Core Class", variable=is_core_var)
+        is_core_checkbox.grid(row=3, column=0, pady=10)
+
         def add_new_course():
             new_course_num = new_course_num_entry.get()
             new_course_name = new_course_name_entry.get()
+            is_core = is_core_var.get()
 
             if new_course_num and new_course_name:
                 try:
@@ -347,10 +385,10 @@ def enter_degree(conn):
 
                     # Now associate this new course with the degree
                     insert_course_deg = """
-                    INSERT INTO degree_courses (degree_name, degree_level, course_num)
-                    VALUES (%s, %s, %s)
+                    INSERT INTO degree_courses (degree_name, degree_level, course_num, is_core)
+                    VALUES (%s, %s, %s, %s)
                     """
-                    cursor.execute(insert_course_deg, (degree_name, degree_level, new_course_num))
+                    cursor.execute(insert_course_deg, (degree_name, degree_level, new_course_num, is_core))
                     conn.commit()
                     messagebox.showinfo("Success", "New course associated with the degree!")
 
@@ -434,6 +472,10 @@ def enter_course(conn):
         association_window.title(f"Associate {course_name} with a Degree")
 
         tk.Label(association_window, text="Select a Degree to associate this course with:").grid(row=0, column=0, pady=10)
+        is_core_var = tk.IntVar()
+        core_checkbox = tk.Checkbutton(association_window, text="Is this a Core Course?", variable=is_core_var)
+        core_checkbox.grid(row=1, column=0, pady=5)
+
         tk.Button(association_window, text="Don't Associate a Course", command=association_window.destroy).grid(row=3, column=0, pady=10)
         cursor = conn.cursor()
         cursor.execute("SELECT degree_name, degree_level FROM degree")
@@ -443,22 +485,23 @@ def enter_course(conn):
         for degree in degrees:
             degree_listbox.insert(tk.END, f"{degree[0]} - {degree[1]}")
         
-        degree_listbox.grid(row=1, column=0, pady=10)
+        degree_listbox.grid(row=2, column=0, pady=10)
 
         def add_association():
             selected_index = degree_listbox.curselection()
             if selected_index:
                 
                 degree_name, degree_level = degrees[selected_index[0]]
+                is_core = is_core_var.get()
                 try:
                     # Insert the course-degree association into the degree_course table
                     insert_course_degree_query = """
-                    INSERT INTO degree_courses (degree_name, degree_level, course_num)
-                    VALUES (%s, %s, %s)
+                    INSERT INTO degree_courses (degree_name, degree_level, course_num, is_core)
+                    VALUES (%s, %s, %s, %s)
                     """
-                    cursor.execute(insert_course_degree_query, (degree_name, degree_level, course_num))
+                    cursor.execute(insert_course_degree_query, (degree_name, degree_level, course_num, is_core))
                     conn.commit()
-                    messagebox.showinfo("Success", f"Course {course_num} associated with {degree_name}!")
+                    messagebox.showinfo("Success", f"Course {course_num} associated with {degree_name} (Core: {bool(is_core)}!")
 
                     try:
                         get_goal_query = """
@@ -494,7 +537,7 @@ def enter_course(conn):
 
 
             
-        tk.Button(association_window, text="Associate", command=add_association).grid(row=2, column=0, pady=10)
+        tk.Button(association_window, text="Associate", command=add_association).grid(row=5, column=0, pady=10)
 
 def enter_instructor(conn):
     instructor_window = tk.Toplevel()
@@ -1012,7 +1055,7 @@ def enter_evaluation(conn):
                             except mysql.connector.Error as e:
                                 print(f"Error: {e}")
                         else:
-                            print("Please fill in at least one evaluation criteria.")
+                            tk.Label(eval_info_window, text="No evaluation info found for this section.").grid(row=0, column=0)
                     except Exception as e:
                             tk.Label(
                                 change_eval_window, 
