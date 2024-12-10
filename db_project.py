@@ -140,7 +140,7 @@ def create_tables(conn):
     DROP TABLE IF EXISTS evaluation;
 
 """
-  #  cursor.execute(drop_eval)
+    #cursor.execute(drop_eval)
 
     create_evaluation = """
             CREATE TABLE IF NOT EXISTS evaluation (
@@ -152,12 +152,12 @@ def create_tables(conn):
                 degree_name VARCHAR(200),
                 degree_level VARCHAR(200),
                 goal_type VARCHAR(200),
-                suggestions VARCHAR(500),
-                suggestions_complete INT,
-                numA int,
-                numB int,
-                numC int,
-                numF int,
+                suggestions VARCHAR(500) DEFAULT NULL,
+                suggestions_complete INT DEFAULT 0,
+                numA int DEFAULT NULL,
+                numB int DEFAULT NULL,
+                numC int DEFAULT NULL,
+                numF int DEFAULT NULL,
                 PRIMARY KEY(goal_num, degree_name, degree_level, section_num, course_num, year, semester),
                 FOREIGN KEY (goal_num, degree_name, degree_level) REFERENCES goal(goal_num, degree_name, degree_level) ON DELETE CASCADE,
                 FOREIGN KEY (course_num, degree_name, degree_level) REFERENCES degree_courses(course_num, degree_name, degree_level) ON DELETE CASCADE,
@@ -781,16 +781,23 @@ def enter_evaluation(data_entry_window, conn):
 
     def view_sections(evaluation_window, conn):
         semester_and_instructor_window = tk.Toplevel()
-        semester_and_instructor_window.title("Enter Semester and Instructor ID")
+        semester_and_instructor_window.title("Enter Semester, Year and Instructor ID")
 
-        label_semester = tk.Label(semester_and_instructor_window, text='Semester')
+        label_semester = tk.Label(semester_and_instructor_window, text='Semester (Spring, Summer, or Fall)')
         label_semester.grid(row=0, column=0)
+
+        label_year = tk.Label(semester_and_instructor_window, text='Year')
+        label_year.grid(row=1, column=0)
 
         label_instructor_id = tk.Label(semester_and_instructor_window, text='Instructor ID')
         label_instructor_id.grid(row=2, column=0)
 
+
         semester_entry = tk.Entry(semester_and_instructor_window)  # Entry field for semester
         semester_entry.grid(row=0, column=1)
+
+        year_entry = tk.Entry(semester_and_instructor_window)  # Entry field for instructor ID
+        year_entry.grid(row=1, column=1)
 
         instructor_id_entry = tk.Entry(semester_and_instructor_window)  # Entry field for instructor ID
         instructor_id_entry.grid(row=2, column=1)
@@ -806,12 +813,12 @@ def enter_evaluation(data_entry_window, conn):
 
         def get_sections():
             semester = semester_entry.get()
-            #year = year_entry.get()
+            year = year_entry.get()
             instructor_id = instructor_id_entry.get()
             cursor = conn.cursor()
 
-            if instructor_id and semester:
-                cursor.execute("SELECT course_num, section_num FROM section WHERE semester = %s AND instructor_id = %s", (semester, instructor_id))
+            if instructor_id and semester and year:
+                cursor.execute("SELECT course_num, section_num FROM section WHERE semester = %s AND instructor_id = %s and year = %s", (semester, instructor_id, year))
                 sections = cursor.fetchall()
                 if sections:
                     print(sections)
@@ -823,10 +830,10 @@ def enter_evaluation(data_entry_window, conn):
                     sections_var.set(section_options[0])
                     return sections
                 else:
-                    print("No sections found for this semester and instructor.")
+                    print("No sections found for this semester, year, and instructor.")
                     return None
             else:
-                print("Please fill in both semester and instructor ID.")
+                print("Please fill in semester, year, and instructor ID.")
                 return None
         tk.Button(semester_and_instructor_window, text="Submit", command=get_sections).grid(row=4, column=1, pady=10)
         tk.Button(semester_and_instructor_window, text="View Evaluation Info", command=lambda: view_eval_info(semester_and_instructor_window, conn)).grid(row=5, column=1, pady=10)
@@ -869,8 +876,8 @@ def enter_evaluation(data_entry_window, conn):
                 change_eval_window = tk.Toplevel()
                 change_eval_window.title("Change/Add Evaluation Info")
 
-                label_year = tk.Label(change_eval_window, text='Year')
-                label_year.grid(row=0, column=0)
+                # label_year = tk.Label(change_eval_window, text='Year')
+                # label_year.grid(row=0, column=0)
 
                 label_goal_num = tk.Label(change_eval_window, text='Goal Number')
                 label_goal_num.grid(row=1, column=0)
@@ -887,7 +894,7 @@ def enter_evaluation(data_entry_window, conn):
                 label_suggestions = tk.Label(change_eval_window, text='Suggestions')
                 label_suggestions.grid(row=5, column=0)
 
-                label_suggestions_complete = tk.Label(change_eval_window, text='Suggestions Complete?')
+                label_suggestions_complete = tk.Label(change_eval_window, text='Suggestions Complete? (Enter 0 for yes and 1 for no)')
                 label_suggestions_complete.grid(row=6, column=0)
 
                 label_numA = tk.Label(change_eval_window, text='Number of A Grades')
@@ -902,8 +909,8 @@ def enter_evaluation(data_entry_window, conn):
                 label_numF = tk.Label(change_eval_window, text='Number of F Grades')
                 label_numF.grid(row=10, column=0)
 
-                year_entry = tk.Entry(change_eval_window)
-                year_entry.grid(row=0, column=1)
+                # year_entry = tk.Entry(change_eval_window)
+                # year_entry.grid(row=0, column=1)
 
                 goal_num_entry = tk.Entry(change_eval_window)
                 goal_num_entry.grid(row=1, column=1)
@@ -935,7 +942,7 @@ def enter_evaluation(data_entry_window, conn):
                 numF_entry = tk.Entry(change_eval_window)
                 numF_entry.grid(row=10, column=1)
 
-                tk.Button(change_eval_window, text="Submit", command=lambda: submit_eval_info()).grid(row=9, column=1, pady=10)
+                tk.Button(change_eval_window, text="Submit", command=lambda: submit_eval_info()).grid(row=13, column=1, pady=10)
 
                 def submit_eval_info():
                     goal_num = goal_num_entry.get()
@@ -944,21 +951,37 @@ def enter_evaluation(data_entry_window, conn):
                     degree_name = degree_name_entry.get()
                     degree_level = degree_level_entry.get()
                     goal_type = goal_type_entry.get()
-                    suggestions = suggestions_entry.get()
+                    suggestions = suggestions_entry.get() if suggestions_entry.get().strip() else None
                     suggestions_complete = suggestions_complete_entry.get()
 
-                    numA = numA_entry.get()
-                    numB = numB_entry.get()
-                    numC = numC_entry.get()
-                    numF = numF_entry.get()
+                    # Ensure suggestions_complete is valid (0 or 1)
+                    if suggestions_complete not in ['0', '1']:
+                        suggestions_complete = None
+                        tk.Label(
+                            change_eval_window, 
+                            text="Invalid value for 'Suggestions Complete'. Set to default value NO (NULL)."
+                        ).grid(row=12, column=0)
+
+                    numA = int(numA_entry.get()) if numA_entry.get().strip() else None
+                    numB = int(numB_entry.get()) if numB_entry.get().strip() else None
+                    numC = int(numC_entry.get()) if numC_entry.get().strip() else None
+                    numF = int(numF_entry.get()) if numF_entry.get().strip() else None
 
                     cursor = conn.cursor()
 
-                    if goal_num or year or degree_name or degree_level or goal_type or suggestions or suggestions_complete or numA or numB or numC or numF:
+                    if  goal_type or suggestions or suggestions_complete or numA or numB or numC or numF:
                         try: 
                             eval_insert_query = """
                                 INSERT INTO evaluation (section_num, year, semester, course_num, goal_num, degree_name, degree_level, goal_type, suggestions, suggestions_complete, numA, numB, numC, numF) 
                                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                ON DUPLICATE KEY UPDATE
+                                goal_type = VALUES(goal_type),
+                                suggestions = VALUES(suggestions),
+                                suggestions_complete = VALUES(suggestions_complete),
+                                numA = VALUES(numA),
+                                numB = VALUES(numB),
+                                numC = VALUES(numC),
+                                numF = VALUES(numF)
                             """
                             cursor.execute(eval_insert_query, (section_num, year, semester, course_num, goal_num, degree_name, degree_level, goal_type, suggestions, suggestions_complete, numA, numB, numC, numF))
                             conn.commit()
@@ -967,7 +990,7 @@ def enter_evaluation(data_entry_window, conn):
                         except mysql.connector.Error as e:
                             print(f"Error: {e}")
                     else:
-                        print("Please fill in at least one field.")
+                        print("Please fill in at least one evaluation criteria.")
         
 
 
@@ -1457,7 +1480,7 @@ def query_pertcentage(conn):
     window = tk.Toplevel()
     window.title("Sections Where F's Percentage Not Reached")
 
-    tk.Label(window, text="F percentage").grid(row=0, column=0)
+    tk.Label(window, text="F percentage (enter as decimal between 0 and 1)").grid(row=0, column=0)
     tk.Label(window, text="Semester").grid(row=1, column=0)
     tk.Label(window, text="Year").grid(row=2, column=0)
 
@@ -1472,12 +1495,15 @@ def query_pertcentage(conn):
     def execute_query():
         cursor = conn.cursor()
         percentage = percentage_entry.get()
+        percentage = float(percentage)
         semester = semester_entry.get().strip().lower()
         year = year_entry.get()
         year = int(year)
 
         if not percentage or not semester or not year:
             tk.Label(window, text = 'All fields are required!').grid(row = 4, column = 1)
+        elif (percentage <= 0 or percentage >= 1):
+            tk.Label(window, text = 'Enter the percentage as a decimal between 0 and 1 (ex: enter .20 instead of 20%)').grid(row = 4, column = 1)
         else:
             get_sections_query = """
             SELECT * 
@@ -1503,14 +1529,12 @@ def query_pertcentage(conn):
             result_window.title("Percentage Query Results")
             if section_results:
                 for result in section_results:
-                    section_info = f"Section num: {result[0][0]}, Course num: {result[0][3]}, Percentage{result[1]}, Semester: {result[2]}"
+                    section_info = f"Section num: {result[0][0]}, Course num: {result[0][3]}, Percentage of students that got an F: {result[1]*100:.1f}%"
                     tk.Label(result_window, text=section_info).pack()
             else:
                 tk.Label(result_window, text="No sections found for the specified criteria.").pack()
 
     tk.Button(window, text="Submit", command=execute_query).grid(row=5, column=1)
-
-
 
 
                 
