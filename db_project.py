@@ -55,7 +55,7 @@ def connect_to_database():
 def create_tables(conn):
     cursor = conn.cursor()
     drop_tables = """
-    DROP TABLE IF EXISTS evaluation, section, degree_courses, goal, degree, instructor, course;
+    #DROP TABLE IF EXISTS evaluation, section, degree_courses, goal, degree, instructor, course;
 """
     cursor.execute(drop_tables)
     
