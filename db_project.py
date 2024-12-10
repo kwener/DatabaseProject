@@ -15,7 +15,7 @@ def is_valid_semester(value):
     return value.lower() in ['fall', 'spring', 'summer']
 
 def is_valid_year(value):
-    return len(str(value)) == 4 and value >= 1600
+    return len(str(value)) == 4 and int(value) >= 1600
 
 def load_config(filename="db_config.json"):
     try:
@@ -67,7 +67,7 @@ def create_tables(conn):
             """
     cursor.execute(create_course)
 
-#i dont know if instructor name should be not null or not, it doesnt matter all that much if instructor has a name or not 
+#I don't know if instructor name should be not null or not, it doesn't matter all that much if instructor has a name or not
     create_instructor= """
             CREATE TABLE IF NOT EXISTS instructor (
                 instructor_id VARCHAR(10) PRIMARY KEY,
@@ -135,12 +135,6 @@ def create_tables(conn):
             );
             """
     cursor.execute(create_goal)
-
-    drop_eval = """
-    DROP TABLE IF EXISTS evaluation;
-
-"""
-    #cursor.execute(drop_eval)
 
     create_evaluation = """
             CREATE TABLE IF NOT EXISTS evaluation (
@@ -586,7 +580,6 @@ def enter_section(conn):
             course_num = course_num_entry.get()
             section_num = section_num_entry.get()
             year = year_entry.get()
-            year = int(year)
             semester = semester_entry.get()
             num_students = num_students_entry.get()
             instructor_id = instructor_id_entry.get()
@@ -846,7 +839,7 @@ def enter_evaluation(conn):
         tk.Button(semester_and_instructor_window, text="View Evaluation Info", command=lambda: view_eval_info(
             )).grid(row=5, column=1, pady=10)
 
-        def view_eval_info():
+        def view_eval_info(semester=None):
             try:
                 section = sections_var.get()
                 if not section:
@@ -869,21 +862,21 @@ def enter_evaluation(conn):
                 cursor.execute(query, (course_num, section_num))
                 eval_info = cursor.fetchall()
 
-            #is_eval_info = False
-
-            if eval_info:
-                tk.Label(eval_info_window, text="Evaluation Info:").grid(row=0, column=0)
-                for eval in eval_info:
-                    eval_text = f"YearL {eval[0]}\nGoal Number: {eval[1]}\nDegree Name: {eval[2]}\nDegree Level: {eval[3]}\nGoal Type: {eval[4]}\nSuggestions: {eval[5]}\nNumber of A Grades: {eval[6]}\nNumber of B Grades: {eval[7]}\nNumber of C Grades: {eval[8]}\nNumber of F Grades: {eval[9]}\n"
-                    tk.Label(eval_info_window, text=eval_text).grid(row=eval_info.index(eval) + 1, column=0)
-                #is_eval_info = True
-                    tk.Button(eval_info_window, text="Change Evaluation Info", command=lambda: change_eval_info(eval_info_window, conn, eval_info)).grid(row=len(eval_info) + 2, column=0, pady=10)
-                    tk.Button(eval_info_window, text="Duplicate Evaluation onto other Degrees", command=lambda: dupe_eval_info(eval_info_window, conn, eval_info, section_num, course_num, semester)).grid(row=len(eval_info) + 3, column=0, pady=10)
-                    
-            else:
-                tk.Label(eval_info_window, text="No evaluation info found for this section.").grid(row=0, column=0)
-                tk.Button(eval_info_window, text="Add Evaluation Info", command=lambda: add_eval_info(eval_info_window, conn)).grid(row=1, column=0, pady=10)
                 #is_eval_info = False
+
+                if eval_info:
+                    tk.Label(eval_info_window, text="Evaluation Info:").grid(row=0, column=0)
+                    for eval in eval_info:
+                        eval_text = f"YearL {eval[0]}\nGoal Number: {eval[1]}\nDegree Name: {eval[2]}\nDegree Level: {eval[3]}\nGoal Type: {eval[4]}\nSuggestions: {eval[5]}\nNumber of A Grades: {eval[6]}\nNumber of B Grades: {eval[7]}\nNumber of C Grades: {eval[8]}\nNumber of F Grades: {eval[9]}\n"
+                        tk.Label(eval_info_window, text=eval_text).grid(row=eval_info.index(eval) + 1, column=0)
+                    #is_eval_info = True
+                        tk.Button(eval_info_window, text="Change Evaluation Info", command=lambda: change_eval_info(eval_info_window, conn, eval_info)).grid(row=len(eval_info) + 2, column=0, pady=10)
+                        tk.Button(eval_info_window, text="Duplicate Evaluation onto other Degrees", command=lambda: dupe_eval_info(eval_info_window, conn, eval_info, section_num, course_num, semester)).grid(row=len(eval_info) + 3, column=0, pady=10)
+
+                else:
+                    tk.Label(eval_info_window, text="No evaluation info found for this section.").grid(row=0, column=0)
+                    tk.Button(eval_info_window, text="Add Evaluation Info", command=lambda: add_eval_info(eval_info_window, conn)).grid(row=1, column=0, pady=10)
+                    #is_eval_info = False
 
 
             # if is_eval_info:
@@ -892,7 +885,7 @@ def enter_evaluation(conn):
             # else:
             #     tk.Button(eval_info_window, text="Add Evaluation Info", command=lambda: add_eval_info(eval_info_window, conn)).grid(row=len(eval_info) + 1, column=0, pady=10)
             
-            tk.Button(eval_info_window, text="Make no changes", command=eval_info_window.destroy).grid(row=len(eval_info) + 4, column=0, pady=10)
+                tk.Button(eval_info_window, text="Make no changes", command=eval_info_window.destroy).grid(row=len(eval_info) + 4, column=0, pady=10)
             
             except Exception as e:
                 messagebox.showerror("Error", f"{e}\nRequest could not be completed. Please ensure all values are entered correctly!")
@@ -1338,7 +1331,7 @@ def query_sections_by_degree(conn):
                 JOIN degree_courses dc ON s.course_num = dc.course_num
                 WHERE dc.degree_name = %s AND dc.degree_level = %s
                   AND s.year BETWEEN %s AND %s
-                ORDER BY s.year ASC, s.semester ASC
+                ORDER BY s.year, s.semester
             """
             cursor.execute(query, (degree_name, degree_level, start_year, end_year))
             sections = cursor.fetchall()
@@ -1355,8 +1348,7 @@ def query_sections_by_degree(conn):
                 tk.Label(result_window, text="No sections found for the specified degree and time range.").grid(row=0, column=0, columnspan=2)
 
         except ValueError:
-            print("Start year and end year must be valid integers!")
-            tk.Label(window, text="Start year and end year must be valid integers!").grid(row=5, column=0)
+            messagebox.showerror("Error", "Start year and end year must be valid integers!")
         except Exception as e:
             print(f"Error: {e}")
             tk.Label(window, text=f"{e}: Request coudld not be completed. Please make sure all values are entered correctly").grid(row=5, column=0)
