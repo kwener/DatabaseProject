@@ -671,48 +671,52 @@ def associate_degree_and_course(data_entry_window, conn):
     submit_button.grid(row=3, column=1, pady=10)
 
     def submit_course_deg(conn):
-        course_id = course_id_entry.get()
-        degree_name = degree_name_entry.get()
-        degree_level = degree_level_entry.get()
-        cursor = conn.cursor()
+        try:
+            course_id = course_id_entry.get()
+            degree_name = degree_name_entry.get()
+            degree_level = degree_level_entry.get()
+            cursor = conn.cursor()
 
-        if course_id and degree_name and degree_level:
-            try:
-                insert_course_deg = """
-                INSERT INTO degree_courses (degree_name, degree_level, course_num)
-                VALUES (%s, %s, %s)
-                """
-
-                cursor.execute(insert_course_deg, (degree_name, degree_level, course_id))
-                print('Association between course and degree made successfully!')
-
+            if course_id and degree_name and degree_level:
                 try:
-                    goal_query = ''' 
-                    SELECT goal_num
-                    FROM goal
-                    WHERE degree_name = %s AND degree_level = %s
-                    '''
+                    insert_course_deg = """
+                    INSERT INTO degree_courses (degree_name, degree_level, course_num)
+                    VALUES (%s, %s, %s)
+                    """
 
-                    cursor.execute(goal_query, (degree_name, degree_level))
-                    goal_nums = cursor.fetchall()
+                    cursor.execute(insert_course_deg, (degree_name, degree_level, course_id))
+                    print('Association between course and degree made successfully!')
 
-                    goals_courses_insert_query = """
-                        INSERT INTO goal_courses (goal_num, degree_name, degree_level, course_num)
-                        VALUES (%s, %s, %s, %s)
-                    """         
-                    for goal_num in goal_nums:
-                        cursor.execute(goals_courses_insert_query, (goal_num[0], degree_name, degree_level, course_id))
+                    try:
+                        goal_query = ''' 
+                        SELECT goal_num
+                        FROM goal
+                        WHERE degree_name = %s AND degree_level = %s
+                        '''
 
-                    conn.commit()
-                    print("Goal and all courses for the degree associated successfully!")
-                    deg_course_window.destroy()
+                        cursor.execute(goal_query, (degree_name, degree_level))
+                        goal_nums = cursor.fetchall()
+
+                        goals_courses_insert_query = """
+                            INSERT INTO goal_courses (goal_num, degree_name, degree_level, course_num)
+                            VALUES (%s, %s, %s, %s)
+                        """         
+                        for goal_num in goal_nums:
+                            cursor.execute(goals_courses_insert_query, (goal_num[0], degree_name, degree_level, course_id))
+
+                        conn.commit()
+                        print("Goal and all courses for the degree associated successfully!")
+                        deg_course_window.destroy()
+
+                    except mysql.connector.Error as e:
+                        print(f"Error: {e}")
 
                 except mysql.connector.Error as e:
-                    print(f"Error: {e}")
+                    print(f"Error connecting {course_id} : {e}")
+                    tk.Label(deg_course_window, text="Unable to associate the given course and degree, please try again").grid(row=4, column=1, pady=10)
+        except Exception as e:
+            tk.Label(deg_course_window, text=f"{e}: Unable to complete request. Please make sure all entered values are correct. ").grid(row=4, column=1, pady=10)
 
-            except mysql.connector.Error as e:
-                print(f"Error connecting {course_id} : {e}")
-                tk.Label(deg_course_window, text="Unable to associate the given course and degree, please try again").grid(row=4, column=1, pady=10)
 
 def enter_goals(data_entry_window, conn):
     goals_window = tk.Toplevel()
@@ -746,50 +750,53 @@ def enter_goals(data_entry_window, conn):
     submit_button.grid(row=4, column=1, pady=10)
 
     def submit_goals(conn):
-        goal_num = goal_num_entry.get()
-        degree_name = degree_name_entry.get()
-        degree_level = degree_level_entry.get()
-        description = description_entry.get()
-        cursor = conn.cursor()
+        try: 
+            goal_num = goal_num_entry.get()
+            degree_name = degree_name_entry.get()
+            degree_level = degree_level_entry.get()
+            description = description_entry.get()
+            cursor = conn.cursor()
 
-        if goal_num and degree_name and degree_level and description:
-            try: 
-                goals_insert_query = "INSERT INTO goal (goal_num, degree_name, degree_level, description) VALUES (%s, %s, %s, %s)"
-                cursor.execute(goals_insert_query, (goal_num, degree_name, degree_level, description))
-                conn.commit()
-                print("Goal added successfully!")
-                goals_window.destroy()
-            
-                try:
-                    course_num_query = ''' 
-                    SELECT course_num
-                    FROM degree_courses
-                    WHERE degree_name = %s AND degree_level = %s
-                    '''
-
-                    cursor.execute(course_num_query, (degree_name, degree_level))
-                    course_nums = cursor.fetchall()
-
-                    goals_courses_insert_query = """
-                        INSERT INTO goal_courses (goal_num, degree_name, degree_level, course_num)
-                        VALUES (%s, %s, %s, %s)
-                 """         
-                    for course_num in course_nums:
-                        cursor.execute(goals_courses_insert_query, (goal_num, degree_name, degree_level, course_num[0]))
-
+            if goal_num and degree_name and degree_level and description:
+                try: 
+                    goals_insert_query = "INSERT INTO goal (goal_num, degree_name, degree_level, description) VALUES (%s, %s, %s, %s)"
+                    cursor.execute(goals_insert_query, (goal_num, degree_name, degree_level, description))
                     conn.commit()
-                    print("Goal and all courses for the degree associated successfully!")
+                    print("Goal added successfully!")
                     goals_window.destroy()
+                
+                    try:
+                        course_num_query = ''' 
+                        SELECT course_num
+                        FROM degree_courses
+                        WHERE degree_name = %s AND degree_level = %s
+                        '''
 
+                        cursor.execute(course_num_query, (degree_name, degree_level))
+                        course_nums = cursor.fetchall()
+
+                        goals_courses_insert_query = """
+                            INSERT INTO goal_courses (goal_num, degree_name, degree_level, course_num)
+                            VALUES (%s, %s, %s, %s)
+                    """         
+                        for course_num in course_nums:
+                            cursor.execute(goals_courses_insert_query, (goal_num, degree_name, degree_level, course_num[0]))
+
+                        conn.commit()
+                        print("Goal and all courses for the degree associated successfully!")
+                        goals_window.destroy()
+
+
+                    except mysql.connector.Error as e:
+                        print(f"Error: {e}")
 
                 except mysql.connector.Error as e:
                     print(f"Error: {e}")
-
-            except mysql.connector.Error as e:
-                print(f"Error: {e}")
-            
-        else:
-            print("Please fill in all fields.")
+                
+            else:
+                print("Please fill in all fields.")
+        except Exception as e:
+                tk.Label(goals_window, text=f"{e}: Unable to complete request. Please make sure values were entered correctly!").grid(row=5, column=1, pady=10)
 
 
 
@@ -834,62 +841,74 @@ def enter_evaluation(data_entry_window, conn):
         sections_dropdown.grid(row=3, column=1, pady=5)
 
         def get_sections():
-            semester = semester_entry.get()
-            year = year_entry.get()
-            instructor_id = instructor_id_entry.get()
-            cursor = conn.cursor()
+            try:
+                semester = semester_entry.get()
+                year = year_entry.get()
+                instructor_id = instructor_id_entry.get()
+                cursor = conn.cursor()
 
-            if instructor_id and semester and year:
-                cursor.execute("SELECT course_num, section_num FROM section WHERE semester = %s AND instructor_id = %s and year = %s", (semester, instructor_id, year))
-                sections = cursor.fetchall()
-                if sections:
-                    print(sections)
-                    # sections_text = "\n".join([f"Course: {course}, Section: {section}" for course, section in sections])
-                    # sections_display.config(text=sections_text)
-                    # semester_and_instructor_window.update_idletasks()
-                    section_options = [f"Course: {course}, Section: {section}" for course, section in sections]
-                    sections_dropdown["values"] = section_options
-                    sections_var.set(section_options[0])
-                    return sections
+                if instructor_id and semester and year:
+                    cursor.execute("SELECT course_num, section_num FROM section WHERE semester = %s AND instructor_id = %s and year = %s", (semester, instructor_id, year))
+                    sections = cursor.fetchall()
+                    if sections:
+                        print(sections)
+                        # sections_text = "\n".join([f"Course: {course}, Section: {section}" for course, section in sections])
+                        # sections_display.config(text=sections_text)
+                        # semester_and_instructor_window.update_idletasks()
+                        section_options = [f"Course: {course}, Section: {section}" for course, section in sections]
+                        sections_dropdown["values"] = section_options
+                        sections_var.set(section_options[0])
+                        return sections
+                    else:
+                        print("No sections found for this semester, year, and instructor.")
+                        tk.Label(semester_and_instructor_window, text=f"No sections found for this semester, year, and instructor.").grid(row=4, column=1, pady=10)                       
+                        return None
                 else:
-                    print("No sections found for this semester, year, and instructor.")
+                    print("Please fill in semester, year, and instructor ID.")
+                    tk.Label(semester_and_instructor_window, text=f"Please fill in semester, year, and instructor ID.").grid(row=4, column=1, pady=10)
                     return None
-            else:
-                print("Please fill in semester, year, and instructor ID.")
-                return None
+
+            except Exception as e:
+                tk.Label(semester_and_instructor_window, text=f"Unable to complete request. Please make sure values are entered correctly!").grid(row=4, column=1, pady=10)
+
+
         tk.Button(semester_and_instructor_window, text="Submit", command=get_sections).grid(row=4, column=1, pady=10)
         tk.Button(semester_and_instructor_window, text="View Evaluation Info", command=lambda: view_eval_info(semester_and_instructor_window, conn)).grid(row=5, column=1, pady=10)
 
         def view_eval_info(semester_and_instructor_window, conn):
-            section = sections_var.get()
-            if not section:
-                print("Please select a section.")
-                return
+            try:
+                section = sections_var.get()
+                if not section:
+                    print("Please select a section.")
+                    return
 
-            course_num, section_num = section.split(", ")
-            course_num = course_num.split(": ")[1]
-            section_num = section_num.split(": ")[1]
+                course_num, section_num = section.split(", ")
+                course_num = course_num.split(": ")[1]
+                section_num = section_num.split(": ")[1]
 
-            eval_info_window = tk.Toplevel()
-            eval_info_window.title("Enter Evaluation Info")
+                eval_info_window = tk.Toplevel()
+                eval_info_window.title("Enter Evaluation Info")
 
-            cursor = conn.cursor()
-            query = """
-                SELECT goal_num, degree_name, degree_level, goal_type, suggestions, suggestions_complete, numA, numB, numC, numF
-                FROM evaluation
-                WHERE course_num = %s AND section_num = %s
-            """
+                cursor = conn.cursor()
+                query = """
+                    SELECT goal_num, degree_name, degree_level, goal_type, suggestions, suggestions_complete, numA, numB, numC, numF
+                    FROM evaluation
+                    WHERE course_num = %s AND section_num = %s
+                """
 
-            cursor.execute(query, (course_num, section_num))
-            eval_info = cursor.fetchall()
+                cursor.execute(query, (course_num, section_num))
+                eval_info = cursor.fetchall()
+            
 
-            if eval_info:
-                tk.Label(eval_info_window, text="Evaluation Info:").grid(row=0, column=0)
-                for eval in eval_info:
-                    eval_text = f"Goal Number: {eval[0]}\nDegree Name: {eval[1]}\nDegree Level: {eval[2]}\nGoal Type: {eval[3]}\nSuggestions: {eval[4]}\nSuggestions complete? {"Yes" if eval[5] else "No"}\nNumber of A Grades: {eval[6]}\nNumber of B Grades: {eval[7]}\nNumber of C Grades: {eval[8]}\nNumber of F Grades: {eval[9]}\n"
-                    tk.Label(eval_info_window, text=eval_text).grid(row=eval_info.index(eval) + 1, column=0)
-            else:
-                tk.Label(eval_info_window, text="No evaluation info found for this section.").grid(row=0, column=0)
+                if eval_info:
+                    tk.Label(eval_info_window, text="Evaluation Info:").grid(row=0, column=0)
+                    for eval in eval_info:
+                        eval_text = f"Goal Number: {eval[0]}\nDegree Name: {eval[1]}\nDegree Level: {eval[2]}\nGoal Type: {eval[3]}\nSuggestions: {eval[4]}\nSuggestions complete? {"Yes" if eval[5] else "No"}\nNumber of A Grades: {eval[6]}\nNumber of B Grades: {eval[7]}\nNumber of C Grades: {eval[8]}\nNumber of F Grades: {eval[9]}\n"
+                        tk.Label(eval_info_window, text=eval_text).grid(row=eval_info.index(eval) + 1, column=0)
+                else:
+                    tk.Label(eval_info_window, text="No evaluation info found for this section.").grid(row=len(eval_info) + 1, column=0)
+            except Exception as e:
+                tk.Label(eval_info_window, text=f"{e}:Request could not be completed. Please ensure all values are entered correctly!").grid(row=len(eval_info) + 1, column=0)
 
             tk.Button(eval_info_window, text="Change/Add Evaluation Info", command=lambda: change_eval_info(eval_info_window, conn)).grid(row=len(eval_info) + 1, column=0, pady=10)
 
@@ -967,53 +986,59 @@ def enter_evaluation(data_entry_window, conn):
                 tk.Button(change_eval_window, text="Submit", command=lambda: submit_eval_info()).grid(row=13, column=1, pady=10)
 
                 def submit_eval_info():
-                    goal_num = goal_num_entry.get()
-                    semester = semester_entry.get()
-                    year = year_entry.get()
-                    degree_name = degree_name_entry.get()
-                    degree_level = degree_level_entry.get()
-                    goal_type = goal_type_entry.get()
-                    suggestions = suggestions_entry.get() if suggestions_entry.get().strip() else None
-                    suggestions_complete = suggestions_complete_entry.get()
+                    try:
+                        goal_num = goal_num_entry.get()
+                        semester = semester_entry.get()
+                        year = year_entry.get()
+                        degree_name = degree_name_entry.get()
+                        degree_level = degree_level_entry.get()
+                        goal_type = goal_type_entry.get()
+                        suggestions = suggestions_entry.get() if suggestions_entry.get().strip() else None
+                        suggestions_complete = suggestions_complete_entry.get()
 
-                    # Ensure suggestions_complete is valid (0 or 1)
-                    if suggestions_complete not in ['0', '1']:
-                        suggestions_complete = None
-                        tk.Label(
-                            change_eval_window, 
-                            text="Invalid value for 'Suggestions Complete'. Set to default value NO (NULL)."
-                        ).grid(row=12, column=0)
+                        # Ensure suggestions_complete is valid (0 or 1)
+                        if suggestions_complete not in ['0', '1']:
+                            suggestions_complete = None
+                            tk.Label(
+                                change_eval_window, 
+                                text="Invalid value for 'Suggestions Complete'. Set to default value NO (NULL)."
+                            ).grid(row=12, column=0)
 
-                    numA = int(numA_entry.get()) if numA_entry.get().strip() else None
-                    numB = int(numB_entry.get()) if numB_entry.get().strip() else None
-                    numC = int(numC_entry.get()) if numC_entry.get().strip() else None
-                    numF = int(numF_entry.get()) if numF_entry.get().strip() else None
+                        numA = int(numA_entry.get()) if numA_entry.get().strip() else None
+                        numB = int(numB_entry.get()) if numB_entry.get().strip() else None
+                        numC = int(numC_entry.get()) if numC_entry.get().strip() else None
+                        numF = int(numF_entry.get()) if numF_entry.get().strip() else None
 
-                    cursor = conn.cursor()
+                        cursor = conn.cursor()
 
-                    if  goal_type or suggestions or suggestions_complete or numA or numB or numC or numF:
-                        try: 
-                            eval_insert_query = """
-                                INSERT INTO evaluation (section_num, year, semester, course_num, goal_num, degree_name, degree_level, goal_type, suggestions, suggestions_complete, numA, numB, numC, numF) 
-                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                                ON DUPLICATE KEY UPDATE
-                                goal_type = VALUES(goal_type),
-                                suggestions = VALUES(suggestions),
-                                suggestions_complete = VALUES(suggestions_complete),
-                                numA = VALUES(numA),
-                                numB = VALUES(numB),
-                                numC = VALUES(numC),
-                                numF = VALUES(numF)
-                            """
-                            cursor.execute(eval_insert_query, (section_num, year, semester, course_num, goal_num, degree_name, degree_level, goal_type, suggestions, suggestions_complete, numA, numB, numC, numF))
-                            conn.commit()
-                            print("Evaluation added successfully!")
-                            change_eval_window.destroy()
-                        except mysql.connector.Error as e:
-                            print(f"Error: {e}")
-                    else:
-                        print("Please fill in at least one evaluation criteria.")
-        
+                        if  goal_type or suggestions or suggestions_complete or numA or numB or numC or numF:
+                            try: 
+                                eval_insert_query = """
+                                    INSERT INTO evaluation (section_num, year, semester, course_num, goal_num, degree_name, degree_level, goal_type, suggestions, suggestions_complete, numA, numB, numC, numF) 
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                    ON DUPLICATE KEY UPDATE
+                                    goal_type = VALUES(goal_type),
+                                    suggestions = VALUES(suggestions),
+                                    suggestions_complete = VALUES(suggestions_complete),
+                                    numA = VALUES(numA),
+                                    numB = VALUES(numB),
+                                    numC = VALUES(numC),
+                                    numF = VALUES(numF)
+                                """
+                                cursor.execute(eval_insert_query, (section_num, year, semester, course_num, goal_num, degree_name, degree_level, goal_type, suggestions, suggestions_complete, numA, numB, numC, numF))
+                                conn.commit()
+                                print("Evaluation added successfully!")
+                                change_eval_window.destroy()
+                            except mysql.connector.Error as e:
+                                print(f"Error: {e}")
+                        else:
+                            print("Please fill in at least one evaluation criteria.")
+                    except Exception as e:
+                            tk.Label(
+                                change_eval_window, 
+                                text=f"{e}Request could not be completed. Please make sure all values are entered correctly."
+                            ).grid(row=12, column=0)
+            
 
 
         
@@ -1141,7 +1166,7 @@ def query_sections_by_degree(conn):
         end_year = end_year_entry.get().strip()
 
         if not degree_name or not degree_level or not start_year or not end_year:
-            print("All fields are required!")
+            tk.Label(window, text="Please fill out all fields").grid(row=4, column=0)
             return
 
         try:
@@ -1174,8 +1199,11 @@ def query_sections_by_degree(conn):
 
         except ValueError:
             print("Start year and end year must be valid integers!")
+            tk.Label(window, text="Start year and end year must be valid integers!").grid(row=5, column=0)
         except Exception as e:
             print(f"Error: {e}")
+            tk.Label(window, text=f"{e}: Request coudld not be completed. Please make sure all values are entered correctly").grid(row=5, column=0)
+
 
     tk.Button(window, text="Submit", command=execute_query).grid(row=4, column=1)
 
@@ -1192,30 +1220,33 @@ def query_goals_by_degree(conn):
     degree_level_entry.grid(row=1, column=1)
 
     def execute_query():
-        degree_name = degree_name_entry.get()
-        degree_level = degree_level_entry.get()
+        try:
+            degree_name = degree_name_entry.get()
+            degree_level = degree_level_entry.get()
 
-        if not degree_name or not degree_level:
-            print("Both degree name and level are required!")
-            return
+            if not degree_name or not degree_level:
+                tk.Label(degree_window, text="Please enter degree name and level").grid(row=2, column=0)
+                return
 
-        cursor = conn.cursor()
-        query = """
-            SELECT goal_num, description
-            FROM goal
-            WHERE degree_name = %s AND degree_level = %s
-        """
-        cursor.execute(query, (degree_name, degree_level))
-        goals = cursor.fetchall()
+            cursor = conn.cursor()
+            query = """
+                SELECT goal_num, description
+                FROM goal
+                WHERE degree_name = %s AND degree_level = %s
+            """
+            cursor.execute(query, (degree_name, degree_level))
+            goals = cursor.fetchall()
 
-        result_window = tk.Toplevel()
-        result_window.title("Goals Result")
-        if goals:
-            tk.Label(result_window, text="Goals Associated with the Degree:").pack()
-            for goal in goals:
-                tk.Label(result_window, text=f"Goal {goal[0]}: {goal[1]}").pack()
-        else:
-            tk.Label(result_window, text="No goals found for the specified degree.").pack()
+            result_window = tk.Toplevel()
+            result_window.title("Goals Result")
+            if goals:
+                tk.Label(result_window, text="Goals Associated with the Degree:").pack()
+                for goal in goals:
+                    tk.Label(result_window, text=f"Goal {goal[0]}: {goal[1]}").pack()
+            else:
+                tk.Label(result_window, text="No goals found for the specified degree.").pack()
+        except Exception as e:
+            tk.Label(degree_window, text=f"{e}: Request could not be completed. Please make sure all entered values are correct").grid(row=3, column=0)
 
     tk.Button(degree_window, text="Submit", command=execute_query).grid(row=2, column=1)
 
