@@ -27,9 +27,9 @@
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "Python.build-release.executor": "Run",
-    "Python.db_project.executor": "Run",
+    "Python.db_project.executor": "Debug",
     "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "main",
+    "git-widget-placeholder": "kiersten2",
     "ignore.virus.scanning.warn.message": "true",
     "last_opened_file_path": "C:/Users/miles/Downloads/SDL_image-main/SDL_image-main/build-scripts/build-release.py",
     "node.js.detected.package.eslint": "true",
@@ -80,6 +80,6 @@
     </option>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/DatabaseProject$db_project.coverage" NAME="db_project Coverage Results" MODIFIED="1733787607607" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/DatabaseProject$db_project.coverage" NAME="db_project Coverage Results" MODIFIED="1733795230029" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>

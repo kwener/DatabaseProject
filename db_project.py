@@ -55,7 +55,7 @@ def connect_to_database():
 def create_tables(conn):
     cursor = conn.cursor()
     drop_tables = """
-    DROP TABLE IF EXISTS evaluation, section, degree_courses, goal, degree, instructor, course, goal_courses;
+    #DROP TABLE IF EXISTS evaluation, section, degree_courses, goal, degree, instructor, course, goal_courses;
 """
     cursor.execute(drop_tables)
     
@@ -571,7 +571,7 @@ def associate_degree_and_course(data_entry_window, conn):
     def submit_course_deg(conn):
         course_id = course_id_entry.get()
         degree_name = degree_name_entry.get()
-        degree_level = degree_level.get()
+        degree_level = degree_level_entry.get()
         cursor = conn.cursor()
 
         if course_id and degree_name and degree_level:
@@ -680,15 +680,20 @@ def enter_evaluation(data_entry_window, conn):
         label_semester = tk.Label(semester_and_instructor_window, text='Semester')
         label_semester.grid(row=0, column=0)
 
+        label_year = tk.Label(semester_and_instructor_window, text='Year')
+        label_year.grid(row=1, column=0)
+
         label_instructor_id = tk.Label(semester_and_instructor_window, text='Instructor ID')
-        label_instructor_id.grid(row=1, column=0)
+        label_instructor_id.grid(row=2, column=0)
 
         semester_entry = tk.Entry(semester_and_instructor_window)  # Entry field for semester
         semester_entry.grid(row=0, column=1)
 
+        year_entry = tk.Entry(semester_and_instructor_window)
+        year_entry.grid(row=1, column=1)
+
         instructor_id_entry = tk.Entry(semester_and_instructor_window)  # Entry field for instructor ID
-        instructor_id_entry.grid(row=1, column=1)
-                
+        instructor_id_entry.grid(row=2, column=1)
 
         sections_var = tk.StringVar()  # Variable to hold selected section
         sections_dropdown = ttk.Combobox(
@@ -701,11 +706,12 @@ def enter_evaluation(data_entry_window, conn):
 
         def get_sections():
             semester = semester_entry.get()
+            year = year_entry.get()
             instructor_id = instructor_id_entry.get()
             cursor = conn.cursor()
 
-            if instructor_id and semester:
-                cursor.execute("SELECT course_num, section_num FROM section WHERE semester = %s AND instructor_id = %s", (semester, instructor_id))
+            if instructor_id and year and semester:
+                cursor.execute("SELECT course_num, section_num FROM section WHERE semester = %s AND year = %s AND instructor_id = %s", (semester, year, instructor_id))
                 sections = cursor.fetchall()
                 if sections:
                     print(sections)
@@ -722,8 +728,8 @@ def enter_evaluation(data_entry_window, conn):
             else:
                 print("Please fill in both semester and instructor ID.")
                 return None
-        tk.Button(semester_and_instructor_window, text="Submit", command=get_sections).grid(row=2, column=1, pady=10)
-        tk.Button(semester_and_instructor_window, text="View Evaluation Info", command=lambda: view_eval_info(semester_and_instructor_window, conn)).grid(row=4, column=1, pady=10)
+        tk.Button(semester_and_instructor_window, text="Submit", command=get_sections).grid(row=4, column=1, pady=10)
+        tk.Button(semester_and_instructor_window, text="View Evaluation Info", command=lambda: view_eval_info(semester_and_instructor_window, conn)).grid(row=5, column=1, pady=10)
 
         def view_eval_info(semester_and_instructor_window, conn):
             section = sections_var.get()
@@ -820,6 +826,8 @@ def enter_evaluation(data_entry_window, conn):
                 tk.Button(change_eval_window, text="Submit", command=lambda: submit_eval_info()).grid(row=9, column=1, pady=10)
 
                 def submit_eval_info():
+                    semester_num = semester_entry.get()
+                    year_num = year_entry.get()
                     goal_num = goal_num_entry.get()
                     degree_name = degree_name_entry.get()
                     degree_level = degree_level_entry.get()
@@ -835,10 +843,10 @@ def enter_evaluation(data_entry_window, conn):
                     if goal_num or degree_name or degree_level or goal_type or suggestions or numA or numB or numC or numF:
                         try: 
                             eval_insert_query = """
-                                INSERT INTO evaluation (section_num, course_num, goal_num, degree_name, degree_level, goal_type, suggestions, numA, numB, numC, numF) 
-                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                INSERT INTO evaluation (section_num, year, semester, course_num, goal_num, degree_name, degree_level, goal_type, suggestions, numA, numB, numC, numF) 
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                             """
-                            cursor.execute(eval_insert_query, (section_num, course_num, goal_num, degree_name, degree_level, goal_type, suggestions, numA, numB, numC, numF))
+                            cursor.execute(eval_insert_query, (section_num, year_num, semester_num, course_num, goal_num, degree_name, degree_level, goal_type, suggestions, numA, numB, numC, numF))
                             conn.commit()
                             print("Evaluation added successfully!")
                             change_eval_window.destroy()
@@ -915,7 +923,7 @@ def query_courses_by_degree(conn):
 
         cursor = conn.cursor()
         query = """
-            SELECT course_num 
+            SELECT * 
             FROM degree_courses
             WHERE degree_name = %s AND degree_level = %s
         """
@@ -926,8 +934,19 @@ def query_courses_by_degree(conn):
         result_window.title("Courses Result")
         if courses:
             tk.Label(result_window, text="Courses Associated with the Degree:").pack()
+            print(courses)
+            iteration = 0
             for course in courses:
-                tk.Label(result_window, text=course[0]).pack()
+                query1 = """
+                            SELECT * 
+                            FROM course
+                            WHERE course_num = %s
+                        """
+                cursor.execute(query1, (course[2],))
+                course_n = cursor.fetchall()
+                print(f"Course name: {course_n}")
+                tk.Label(result_window, text=f"{course_n[iteration][1]} {course[2]}: ").pack()
+                iteration = iteration + 1
         else:
             tk.Label(result_window, text="No courses found for the specified degree.").pack()
 
@@ -1000,14 +1019,14 @@ def query_sections_by_semesters(conn):
     window = tk.Toplevel()
     window.title("Sections by Semesters")
 
-    tk.Label(window, text="Course").grid(row=0, column=0)
+    tk.Label(window, text="Course Number").grid(row=0, column=0)
     tk.Label(window, text="Start Semester").grid(row=1, column=0)
     tk.Label(window, text="End Semester").grid(row=2, column=0)
     tk.Label(window, text="Start Year").grid(row=3, column=0)
     tk.Label(window, text="End Year").grid(row=4, column=0)
 
-    course_name = tk.Entry(window)
-    course_name.grid(row=0, column=1)
+    course_num = tk.Entry(window)
+    course_num.grid(row=0, column=1)
     start_semester = tk.Entry(window)
     start_semester.grid(row=1, column=1)
     end_semester = tk.Entry(window)
@@ -1018,7 +1037,7 @@ def query_sections_by_semesters(conn):
     end_year.grid(row=4, column=1)
 
     def execute_query():
-        course = course_name.get().strip()
+        course = course_num.get().strip()
         start_sem = start_semester.get().strip()
         end_sem = end_semester.get().strip()
         start_yr = start_year.get().strip()
